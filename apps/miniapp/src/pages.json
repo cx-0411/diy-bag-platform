@@ -1,0 +1,15 @@
+{
+  "pages": [
+    { "path": "pages/home/index", "style": { "navigationBarTitleText": "首页" } },
+    { "path": "pages/bags/index", "style": { "navigationBarTitleText": "包包列表" } },
+    { "path": "pages/editor/index", "style": { "navigationBarTitleText": "DIY 编辑器" } },
+    { "path": "pages/confirmation/index", "style": { "navigationBarTitleText": "设计确认" } },
+    { "path": "pages/orders/index", "style": { "navigationBarTitleText": "模拟订单" } }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "包包刺绣 DIY 商城",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f7f3ef"
+  }
+}
