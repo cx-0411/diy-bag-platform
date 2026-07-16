@@ -56,6 +56,8 @@ pytest
 前端执行：
 
 ```powershell
+cd apps/miniapp
+npm test
 npm run type-check
-npm run build
+npm run build:h5
 ```

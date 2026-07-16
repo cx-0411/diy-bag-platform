@@ -5,7 +5,8 @@
   "scripts": {
     "dev:h5": "uni --host 0.0.0.0 --port 5174",
     "build:h5": "uni build",
-    "type-check": "vue-tsc --noEmit"
+    "type-check": "vue-tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-alpha-5020120260710001",
@@ -20,6 +21,7 @@
     "@types/node": "^24.1.0",
     "typescript": "~5.8.3",
     "vite": "5.2.8",
+    "vitest": "^1.6.1",
     "vue-tsc": "^3.0.4"
   }
 }
