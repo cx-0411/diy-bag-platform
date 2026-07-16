@@ -13,3 +13,4 @@ coverage/
 htmlcov/
 postgres_data/
 work/
+services/api/alembic-autogen.db
