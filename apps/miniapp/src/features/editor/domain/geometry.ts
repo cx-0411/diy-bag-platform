@@ -4,64 +4,28 @@ export function canPlacePattern(pattern: PatternDefinition, area: EmbroideryArea
   return pattern.width <= area.width && pattern.height <= area.height
 }
 
+export function millimetresToPixels(millimetres: number, areaMillimetres: number, areaPixels: number): number {
+  return (millimetres / areaMillimetres) * areaPixels
+}
+
 export function patternPixelSize(pattern: PatternDefinition, area: EmbroideryArea, areaPixels: PixelSize): PixelSize {
-  return {
-    width: (pattern.width / area.width) * areaPixels.width,
-    height: (pattern.height / area.height) * areaPixels.height,
-  }
+  return { width: millimetresToPixels(pattern.width, area.width, areaPixels.width), height: millimetresToPixels(pattern.height, area.height, areaPixels.height) }
 }
 
-export function maxPlacementRatio(pattern: PatternDefinition, area: EmbroideryArea): PixelPoint {
-  if (!canPlacePattern(pattern, area)) {
-    return { x: 0, y: 0 }
-  }
-
-  return {
-    x: 1 - pattern.width / area.width,
-    y: 1 - pattern.height / area.height,
-  }
+export function clampPlacement(placement: PatternPlacement, pattern: PatternDefinition, area: EmbroideryArea): PatternPlacement {
+  const minX = pattern.width / area.width / 2
+  const minY = pattern.height / area.height / 2
+  return { ...placement, centerXRatio: clamp(placement.centerXRatio, minX, 1 - minX), centerYRatio: clamp(placement.centerYRatio, minY, 1 - minY) }
 }
 
-export function clampPlacement(
-  placement: PatternPlacement,
-  pattern: PatternDefinition,
-  area: EmbroideryArea,
-): PatternPlacement {
-  const max = maxPlacementRatio(pattern, area)
-
-  return {
-    ...placement,
-    xRatio: clamp(placement.xRatio, 0, max.x),
-    yRatio: clamp(placement.yRatio, 0, max.y),
-  }
+export function placementPixelPoint(placement: PatternPlacement, pattern: PatternDefinition, area: EmbroideryArea, areaPixels: PixelSize): PixelPoint {
+  const size = patternPixelSize(pattern, area, areaPixels)
+  return { x: placement.centerXRatio * areaPixels.width - size.width / 2, y: placement.centerYRatio * areaPixels.height - size.height / 2 }
 }
 
-export function placementPixelPoint(placement: PatternPlacement, areaPixels: PixelSize): PixelPoint {
-  return {
-    x: placement.xRatio * areaPixels.width,
-    y: placement.yRatio * areaPixels.height,
-  }
+export function pixelPointToPlacement(pixelTopLeft: PixelPoint, placement: PatternPlacement, pattern: PatternDefinition, area: EmbroideryArea, areaPixels: PixelSize): PatternPlacement {
+  const size = patternPixelSize(pattern, area, areaPixels)
+  return clampPlacement({ ...placement, centerXRatio: (pixelTopLeft.x + size.width / 2) / areaPixels.width, centerYRatio: (pixelTopLeft.y + size.height / 2) / areaPixels.height }, pattern, area)
 }
 
-export function pixelPointToPlacement(
-  pixelPoint: PixelPoint,
-  placement: PatternPlacement,
-  pattern: PatternDefinition,
-  area: EmbroideryArea,
-  areaPixels: PixelSize,
-): PatternPlacement {
-  return clampPlacement(
-    {
-      ...placement,
-      xRatio: pixelPoint.x / areaPixels.width,
-      yRatio: pixelPoint.y / areaPixels.height,
-    },
-    pattern,
-    area,
-  )
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
-
+function clamp(value: number, min: number, max: number): number { return Math.min(Math.max(value, min), max) }

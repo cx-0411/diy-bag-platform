@@ -1,37 +1,35 @@
-export interface SizeMm {
-  width: number
-  height: number
-}
+export interface SizeMm { width: number; height: number }
 
 export interface EmbroideryArea extends SizeMm {
-  /** Relative to the bag image, used by later API-driven rendering. */
   relativeX: number
   relativeY: number
 }
 
-export interface PatternDefinition extends SizeMm {
+export interface BagDefinition extends SizeMm {
   id: string
   name: string
-  priceCents: number
-  color: string
-  symbol: string
+  imageUrl: string
+  basePriceCents: number
+  embroideryArea: EmbroideryArea
 }
 
-/** Top-left coordinates are ratios relative to the embroidery area. */
+export interface PatternCategory { id: string; name: string }
+
+export interface PatternDefinition extends SizeMm {
+  id: string
+  categoryId: string
+  name: string
+  imageUrl: string
+  priceCents: number
+}
+
+/** Center coordinates are ratios relative to the embroidery area. */
 export interface PatternPlacement {
   id: string
   patternId: string
-  xRatio: number
-  yRatio: number
+  centerXRatio: number
+  centerYRatio: number
 }
 
-export interface PixelSize {
-  width: number
-  height: number
-}
-
-export interface PixelPoint {
-  x: number
-  y: number
-}
-
+export interface PixelSize { width: number; height: number }
+export interface PixelPoint { x: number; y: number }
