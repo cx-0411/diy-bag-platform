@@ -18,7 +18,10 @@ def get_design_limit(db: Session = Depends(get_db)):
 def set_design_limit(data: DesignLimitIn, db: Session = Depends(get_db)):
     item = db.scalar(select(AppSetting).where(AppSetting.key == 'max_design_drafts'))
     if item: item.value_int = data.max_drafts
-    else: db.add(AppSetting(key='max_design_drafts', value_int=data.max_drafts))
+    else:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        db.add(AppSetting(key='max_design_drafts', value_int=data.max_drafts, created_at=now, updated_at=now))
     db.commit(); return DesignLimitOut(max_drafts=data.max_drafts)
 @router.post('/files', response_model=AssetOut)
 def upload(file: UploadFile = File(...), db: Session = Depends(get_db)):
