@@ -32,6 +32,10 @@ export const patternApi = {
   update: (id: string, data: PatternPayload) => request<Pattern>(`/patterns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   versions: (id: string) => request<PatternVersion[]>(`/patterns/${id}/versions`),
 }
+export const settingApi = {
+  getDesignLimit: () => request<{ max_drafts: number }>('/settings/design-limit'),
+  setDesignLimit: (max_drafts: number) => request<{ max_drafts: number }>('/admin/settings/design-limit', { method: 'PUT', body: JSON.stringify({ max_drafts }) }),
+}
 export async function uploadImage(file: File): Promise<Asset> {
   const data = new FormData(); data.append('file', file)
   const response = await fetch(`${API_BASE_URL}/files`, { method: 'POST', body: data })

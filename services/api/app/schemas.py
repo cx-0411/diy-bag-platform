@@ -17,6 +17,8 @@ class CatalogBagOut(APIModel):
 class CatalogPatternOut(APIModel):
     id: UUID; category_id: UUID; name: str; image_url: str; width_mm: int; height_mm: int; price_cents: int; pattern_version_id: UUID
 class DesignItemIn(APIModel): pattern_version_id: UUID; center_x_ratio: float = Field(ge=0, le=1); center_y_ratio: float = Field(ge=0, le=1); rotation_degrees: int = Field(default=0, ge=0, le=359)
-class DesignIn(APIModel): bag_id: UUID; items: list[DesignItemIn] = Field(default_factory=list)
+class DesignIn(APIModel): bag_id: UUID; client_key: str = Field(default='legacy-client', min_length=8, max_length=64); items: list[DesignItemIn] = Field(default_factory=list)
 class DesignItemOut(DesignItemIn): id: UUID
 class DesignOut(APIModel): id: UUID; bag_id: UUID; total_price_cents: int; items: list[DesignItemOut]
+class DesignLimitIn(APIModel): max_drafts: int = Field(ge=1, le=20)
+class DesignLimitOut(DesignLimitIn): pass

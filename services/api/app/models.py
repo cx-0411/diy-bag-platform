@@ -24,6 +24,10 @@ class FileAsset(Timestamped):
     storage_key: Mapped[str] = mapped_column(String(500), unique=True)
     content_type: Mapped[str] = mapped_column(String(100))
     size_bytes: Mapped[int] = mapped_column(Integer)
+class AppSetting(Timestamped):
+    __tablename__ = 'app_settings'
+    key: Mapped[str] = mapped_column(String(100), unique=True)
+    value_int: Mapped[int] = mapped_column(Integer)
 class Bag(SoftDeleted):
     __tablename__ = 'bags'
     name: Mapped[str] = mapped_column(String(200))
@@ -65,6 +69,7 @@ class Design(Timestamped):
     bag_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('bags.id'))
     total_price_cents: Mapped[int] = mapped_column(Integer)
     preview_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey('file_assets.id'), nullable=True)
+    client_key: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
 class DesignItem(Timestamped):
     __tablename__ = 'design_items'
     design_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('designs.id'))

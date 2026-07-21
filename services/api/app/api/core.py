@@ -5,12 +5,21 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Bag, EmbroideryArea, FileAsset, Pattern, PatternCategory, PatternVersion, DesignItem
-from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignOut, PatternIn, PatternOut, PatternVersionOut
+from app.models import AppSetting, Bag, EmbroideryArea, FileAsset, Pattern, PatternCategory, PatternVersion, DesignItem
+from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
 from app.services.storage import StorageService
 router = APIRouter()
 def active(statement, model): return statement.where(model.deleted_at.is_(None))
+@router.get('/settings/design-limit', response_model=DesignLimitOut)
+def get_design_limit(db: Session = Depends(get_db)):
+    return DesignLimitOut(max_drafts=db.scalar(select(AppSetting.value_int).where(AppSetting.key == 'max_design_drafts')) or 3)
+@router.put('/admin/settings/design-limit', response_model=DesignLimitOut)
+def set_design_limit(data: DesignLimitIn, db: Session = Depends(get_db)):
+    item = db.scalar(select(AppSetting).where(AppSetting.key == 'max_design_drafts'))
+    if item: item.value_int = data.max_drafts
+    else: db.add(AppSetting(key='max_design_drafts', value_int=data.max_drafts))
+    db.commit(); return DesignLimitOut(max_drafts=data.max_drafts)
 @router.post('/files', response_model=AssetOut)
 def upload(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.content_type or not file.content_type.startswith('image/'): raise HTTPException(415, 'Only image uploads are supported')

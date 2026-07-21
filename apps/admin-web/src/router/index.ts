@@ -5,6 +5,7 @@ import BagsView from '../views/BagsView.vue'
 import LoginView from '../views/LoginView.vue'
 import OrdersView from '../views/OrdersView.vue'
 import PatternsView from '../views/PatternsView.vue'
+import SettingsView from '../views/SettingsView.vue'
 
 export default createRouter({
   history: createWebHistory(),
@@ -18,6 +19,7 @@ export default createRouter({
         { path: 'bags', component: BagsView },
         { path: 'patterns', component: PatternsView },
         { path: 'orders', component: OrdersView },
+        { path: 'settings', component: SettingsView },
       ],
     },
   ],
