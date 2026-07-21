@@ -5,5 +5,9 @@
   "versionName": "0.1.0",
   "versionCode": "100",
   "transformPx": false,
-  "h5": { "title": "包包刺绣 DIY 商城" }
+  "h5": { "title": "包包刺绣 DIY 商城" },
+  "mp-toutiao": {
+    "appid": "",
+    "setting": { "urlCheck": true }
+  }
 }

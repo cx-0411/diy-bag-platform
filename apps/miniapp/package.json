@@ -5,6 +5,8 @@
   "scripts": {
     "dev:h5": "uni --host 0.0.0.0 --port 5174",
     "build:h5": "uni build",
+    "dev:mp-toutiao": "uni -p mp-toutiao",
+    "build:mp-toutiao": "uni build -p mp-toutiao",
     "type-check": "vue-tsc --noEmit",
     "test": "vitest run --config vitest.config.ts"
   },
