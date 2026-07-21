@@ -20,6 +20,11 @@ def download(key: str):
     target = Path(StorageService().root) / key
     if not target.is_file(): raise HTTPException(404, 'File not found')
     return FileResponse(target)
+@router.get('/file-assets/{asset_id}', response_model=AssetOut)
+def get_asset(asset_id: UUID, db: Session = Depends(get_db)):
+    asset = db.get(FileAsset, asset_id)
+    if not asset: raise HTTPException(404, 'File asset not found')
+    return AssetOut(id=asset.id, original_name=asset.original_name, content_type=asset.content_type, size_bytes=asset.size_bytes, url=StorageService().url(asset.storage_key))
 @router.post('/bags', response_model=BagOut)
 def create_bag(data: BagIn, db: Session = Depends(get_db)):
     if not db.get(FileAsset, data.image_asset_id): raise HTTPException(422, 'Bag image does not exist')
