@@ -4,7 +4,7 @@ export interface ApiArea { id: string; bag_id: string; relative_x: number; relat
 export interface ApiBag { id: string; name: string; image_url: string; width_mm: number; height_mm: number; base_price_cents: number; embroidery_area: ApiArea }
 export interface ApiCategory { id: string; name: string; sort_order: number }
 export interface ApiPattern { id: string; category_id: string; name: string; image_url: string; width_mm: number; height_mm: number; price_cents: number; pattern_version_id: string }
-export interface ApiDesign { id: string; bag_id: string; total_price_cents: number; items: Array<{ id: string; pattern_version_id: string; center_x_ratio: number; center_y_ratio: number }> }
+export interface ApiDesign { id: string; bag_id: string; total_price_cents: number; items: Array<{ id: string; pattern_version_id: string; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number }> }
 
 type RequestMethod = 'GET' | 'POST'
 function request<T>(path: string, method: RequestMethod = 'GET', data?: object): Promise<T> {
@@ -14,5 +14,5 @@ export const catalogApi = {
   bags: () => request<ApiBag[]>('/catalog/bags'),
   categories: () => request<ApiCategory[]>('/catalog/pattern-categories'),
   patterns: () => request<ApiPattern[]>('/catalog/patterns'),
-  saveDesign: (data: { bag_id: string; items: Array<{ pattern_version_id: string; center_x_ratio: number; center_y_ratio: number }> }) => request<ApiDesign>('/designs', 'POST', data),
+  saveDesign: (data: { bag_id: string; items: Array<{ pattern_version_id: string; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number }> }) => request<ApiDesign>('/designs', 'POST', data),
 }

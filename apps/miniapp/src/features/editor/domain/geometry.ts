@@ -13,9 +13,12 @@ export function patternPixelSize(pattern: PatternDefinition, area: EmbroideryAre
 }
 
 export function clampPlacement(placement: PatternPlacement, pattern: PatternDefinition, area: EmbroideryArea): PatternPlacement {
-  const minX = pattern.width / area.width / 2
-  const minY = pattern.height / area.height / 2
-  return { ...placement, centerXRatio: clamp(placement.centerXRatio, minX, 1 - minX), centerYRatio: clamp(placement.centerYRatio, minY, 1 - minY) }
+  const angle = ((placement.rotationDegrees ?? 0) * Math.PI) / 180
+  const rotatedWidth = Math.abs(pattern.width * Math.cos(angle)) + Math.abs(pattern.height * Math.sin(angle))
+  const rotatedHeight = Math.abs(pattern.width * Math.sin(angle)) + Math.abs(pattern.height * Math.cos(angle))
+  const minX = rotatedWidth / area.width / 2
+  const minY = rotatedHeight / area.height / 2
+  return { ...placement, rotationDegrees: ((placement.rotationDegrees ?? 0) % 360 + 360) % 360, centerXRatio: clamp(placement.centerXRatio, minX, 1 - minX), centerYRatio: clamp(placement.centerYRatio, minY, 1 - minY) }
 }
 
 export function placementPixelPoint(placement: PatternPlacement, pattern: PatternDefinition, area: EmbroideryArea, areaPixels: PixelSize): PixelPoint {

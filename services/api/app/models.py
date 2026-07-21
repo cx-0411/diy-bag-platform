@@ -71,3 +71,4 @@ class DesignItem(Timestamped):
     pattern_version_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('pattern_versions.id'))
     center_x_ratio: Mapped[float] = mapped_column(Numeric(9, 6))
     center_y_ratio: Mapped[float] = mapped_column(Numeric(9, 6))
+    rotation_degrees: Mapped[int] = mapped_column(Integer, default=0)

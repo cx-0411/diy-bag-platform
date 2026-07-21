@@ -30,6 +30,8 @@ export interface PatternPlacement {
   patternId: string
   centerXRatio: number
   centerYRatio: number
+  /** Rotation is allowed; physical size remains fixed. */
+  rotationDegrees: number
 }
 
 export interface PixelSize { width: number; height: number }
