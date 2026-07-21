@@ -4,26 +4,17 @@ import { canPlacePattern, clampPlacement } from '../domain/geometry'
 import type { BagDefinition, PatternCategory, PatternDefinition, PatternPlacement } from '../domain/types'
 import { catalogApi, type ApiBag } from '../../../services/catalog-api'
 
-const DRAFT_KEY = 'diy-bag-editor-draft-v1'
-export const mockBag: BagDefinition = { id: 'classic-tote', name: '焦糖托特包', imageUrl: '/static/editor/bag-tote.svg', width: 280, height: 220, basePriceCents: 15900, embroideryArea: { width: 180, height: 120, relativeX: 0.2, relativeY: 0.28 } }
-export const patternCategories: PatternCategory[] = [{ id: 'floral', name: '花植' }, { id: 'symbol', name: '符号' }, { id: 'animal', name: '动物' }]
-export const patternCatalog: PatternDefinition[] = [
-  { id: 'flower', categoryId: 'floral', name: '玫瑰花', imageUrl: '/static/editor/pattern-flower.svg', width: 42, height: 42, priceCents: 1200 },
-  { id: 'leaf', categoryId: 'floral', name: '绿叶', imageUrl: '/static/editor/pattern-leaf.svg', width: 50, height: 34, priceCents: 1000 },
-  { id: 'heart', categoryId: 'symbol', name: '爱心', imageUrl: '/static/editor/pattern-heart.svg', width: 38, height: 34, priceCents: 1000 },
-  { id: 'star', categoryId: 'symbol', name: '星星', imageUrl: '/static/editor/pattern-star.svg', width: 36, height: 36, priceCents: 900 },
-  { id: 'cat', categoryId: 'animal', name: '小猫', imageUrl: '/static/editor/pattern-cat.svg', width: 46, height: 42, priceCents: 1500 },
-  { id: 'cherry', categoryId: 'floral', name: '樱桃', imageUrl: '/static/editor/pattern-cherry.svg', width: 44, height: 40, priceCents: 1300 },
-]
+const DRAFT_KEY = 'diy-bag-editor-draft-v2'
+const emptyBag: BagDefinition = { id: '', name: '', imageUrl: '', width: 0, height: 0, basePriceCents: 0, embroideryArea: { width: 1, height: 1, relativeX: 0, relativeY: 0 } }
 function placementId(): string { return `placement-${Date.now()}-${Math.random().toString(16).slice(2)}` }
 
 export const useEditorStore = defineStore('editor', () => {
   const placements = ref<PatternPlacement[]>(readDraft())
   const selectedPlacementId = ref<string | null>(null)
-  const bag = ref<BagDefinition>(mockBag)
-  const categories = ref<PatternCategory[]>(patternCategories)
-  const catalog = ref<PatternDefinition[]>(patternCatalog)
-  const activeCategoryId = ref(patternCategories[0].id)
+  const bag = ref<BagDefinition>(emptyBag)
+  const categories = ref<PatternCategory[]>([])
+  const catalog = ref<PatternDefinition[]>([])
+  const activeCategoryId = ref('')
   const catalogError = ref('')
   const loadingCatalog = ref(false)
   const catalogLoaded = ref(false)
