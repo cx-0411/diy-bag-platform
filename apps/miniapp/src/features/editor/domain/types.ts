@@ -21,6 +21,7 @@ export interface PatternDefinition extends SizeMm {
   name: string
   imageUrl: string
   priceCents: number
+  patternVersionId?: string
 }
 
 /** Center coordinates are ratios relative to the embroidery area. */

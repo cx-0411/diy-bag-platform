@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Bag, EmbroideryArea, FileAsset, Pattern, PatternCategory, PatternVersion, DesignItem
-from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignOut, PatternIn, PatternOut, PatternVersionOut
+from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignOut, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
 from app.services.storage import StorageService
 router = APIRouter()
@@ -31,6 +31,11 @@ def create_bag(data: BagIn, db: Session = Depends(get_db)):
     bag = Bag(**data.model_dump()); db.add(bag); db.commit(); db.refresh(bag); return bag
 @router.get('/bags', response_model=list[BagOut])
 def list_bags(db: Session = Depends(get_db)): return db.scalars(active(select(Bag), Bag)).all()
+@router.get('/catalog/bags', response_model=list[CatalogBagOut])
+def list_catalog_bags(db: Session = Depends(get_db)):
+    rows = db.execute(select(Bag, EmbroideryArea, FileAsset).join(EmbroideryArea, EmbroideryArea.bag_id == Bag.id).join(FileAsset, FileAsset.id == Bag.image_asset_id).where(Bag.deleted_at.is_(None), Bag.status == 'published')).all()
+    storage = StorageService()
+    return [CatalogBagOut(id=bag.id, name=bag.name, image_url=storage.url(asset.storage_key), width_mm=bag.width_mm, height_mm=bag.height_mm, base_price_cents=bag.base_price_cents, embroidery_area=AreaOut.model_validate(area)) for bag, area, asset in rows]
 @router.get('/bags/{bag_id}', response_model=BagOut)
 def get_bag(bag_id: UUID, db: Session = Depends(get_db)):
     bag = db.scalar(active(select(Bag).where(Bag.id == bag_id), Bag))
@@ -70,6 +75,9 @@ def create_category(data: CategoryIn, db: Session = Depends(get_db)):
     category = PatternCategory(**data.model_dump()); db.add(category); db.commit(); db.refresh(category); return category
 @router.get('/pattern-categories', response_model=list[CategoryOut])
 def list_categories(db: Session = Depends(get_db)): return db.scalars(active(select(PatternCategory), PatternCategory)).all()
+@router.get('/catalog/pattern-categories', response_model=list[CategoryOut])
+def list_catalog_categories(db: Session = Depends(get_db)):
+    return db.scalars(active(select(PatternCategory), PatternCategory).order_by(PatternCategory.sort_order, PatternCategory.name)).all()
 @router.post('/patterns', response_model=PatternOut)
 def create_pattern(data: PatternIn, db: Session = Depends(get_db)):
     if not db.get(PatternCategory, data.category_id) or not db.get(FileAsset, data.image_asset_id): raise HTTPException(422, 'Category or image does not exist')
@@ -85,6 +93,11 @@ def update_pattern(pattern_id: UUID, data: PatternIn, db: Session = Depends(get_
     db.commit(); db.refresh(pattern); return pattern
 @router.get('/patterns', response_model=list[PatternOut])
 def list_patterns(db: Session = Depends(get_db)): return db.scalars(active(select(Pattern), Pattern)).all()
+@router.get('/catalog/patterns', response_model=list[CatalogPatternOut])
+def list_catalog_patterns(db: Session = Depends(get_db)):
+    rows = db.execute(select(Pattern, PatternVersion, FileAsset).join(PatternVersion, PatternVersion.id == Pattern.current_version_id).join(FileAsset, FileAsset.id == PatternVersion.image_asset_id).where(Pattern.deleted_at.is_(None), Pattern.status == 'published')).all()
+    storage = StorageService()
+    return [CatalogPatternOut(id=pattern.id, category_id=pattern.category_id, name=pattern.name, image_url=storage.url(asset.storage_key), width_mm=version.width_mm, height_mm=version.height_mm, price_cents=version.price_cents, pattern_version_id=version.id) for pattern, version, asset in rows]
 @router.get('/patterns/{pattern_id}/versions', response_model=list[PatternVersionOut])
 def versions(pattern_id: UUID, db: Session = Depends(get_db)): return db.scalars(select(PatternVersion).where(PatternVersion.pattern_id == pattern_id).order_by(PatternVersion.version_number)).all()
 @router.post('/designs', response_model=DesignOut)

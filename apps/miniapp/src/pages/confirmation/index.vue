@@ -1,2 +1,10 @@
-<template><view class="page"><text class="title">设计确认</text><text>设计确认功能将在后续阶段实现。</text></view></template>
-<style scoped>.page{padding:48rpx;display:flex;flex-direction:column;gap:24rpx}.title{font-size:40rpx;font-weight:700}</style>
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useEditorStore } from '../../features/editor/stores/editor'
+const editor = useEditorStore()
+const price = (cents: number) => `¥${(cents / 100).toFixed(2)}`
+const serverTotal = computed(() => editor.savedDesign?.totalPriceCents ?? editor.totalPriceCents)
+function back(): void { uni.navigateBack() }
+</script>
+<template><view class="page"><text class="title">设计确认</text><view v-if="editor.savedDesign" class="ok">设计已保存，后端已重新计算价格。</view><view class="card"><image :src="editor.bag.imageUrl" mode="aspectFit"/><text>{{ editor.bag.name }} · 基础价格 {{ price(editor.bag.basePriceCents) }}</text></view><view class="card"><text class="sub">图案清单</text><view v-for="item in editor.placements" :key="item.id" class="line"><text>{{ editor.getPattern(item.patternId).name }}（固定 {{ editor.getPattern(item.patternId).width }} × {{ editor.getPattern(item.patternId).height }} mm）</text><text>{{ price(editor.getPattern(item.patternId).priceCents) }}</text></view><view class="line total"><text>后端确认总价</text><text>{{ price(serverTotal) }}</text></view></view><button @tap="back">返回继续编辑</button></view></template>
+<style scoped>.page{min-height:100vh;padding:32rpx;background:#f8f2eb}.title{display:block;font-size:42rpx;font-weight:700}.ok{margin-top:18rpx;padding:18rpx;color:#529b2e;background:#f0f9eb;border-radius:14rpx}.card{margin-top:20rpx;padding:20rpx;background:#fff;border-radius:20rpx;display:flex;gap:18rpx;flex-direction:column}.card image{width:250rpx;height:180rpx}.line{display:flex;justify-content:space-between;gap:15rpx;font-size:24rpx}.sub{font-weight:700}.total{padding-top:18rpx;color:#b24638;font-size:30rpx;font-weight:700}button{margin-top:30rpx;color:#fff;background:#a86849}</style>
