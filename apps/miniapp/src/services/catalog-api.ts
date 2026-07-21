@@ -6,7 +6,7 @@ export interface ApiCategory { id: string; name: string; sort_order: number }
 export interface ApiPattern { id: string; category_id: string; name: string; image_url: string; width_mm: number; height_mm: number; price_cents: number; pattern_version_id: string }
 export interface ApiDesign { id: string; bag_id: string; total_price_cents: number; items: Array<{ id: string; pattern_version_id: string; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number }> }
 
-type RequestMethod = 'GET' | 'POST'
+type RequestMethod = 'GET' | 'POST' | 'DELETE'
 function request<T>(path: string, method: RequestMethod = 'GET', data?: object): Promise<T> {
   return new Promise((resolve, reject) => uni.request({ url: `${API_BASE_URL}${path}`, method, data, header: { 'content-type': 'application/json' }, success: (response) => { if (response.statusCode >= 200 && response.statusCode < 300) resolve(response.data as T); else { const body = response.data as { detail?: string }; reject(new Error(body.detail ?? `请求失败（${response.statusCode}）`)) } }, fail: () => reject(new Error('网络请求失败，请确认后端服务已启动')) }))
 }
@@ -16,4 +16,5 @@ export const catalogApi = {
   patterns: () => request<ApiPattern[]>('/catalog/patterns'),
   limit: () => request<{ max_drafts: number }>('/settings/design-limit'),
   saveDesign: (data: { bag_id: string; client_key: string; items: Array<{ pattern_version_id: string; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number }> }) => request<ApiDesign>('/designs', 'POST', data),
+  deleteDesign: (id: string, clientKey: string) => request<void>(`/designs/${id}?client_key=${encodeURIComponent(clientKey)}`, 'DELETE'),
 }
