@@ -26,6 +26,32 @@ def create_bag(data: BagIn, db: Session = Depends(get_db)):
     bag = Bag(**data.model_dump()); db.add(bag); db.commit(); db.refresh(bag); return bag
 @router.get('/bags', response_model=list[BagOut])
 def list_bags(db: Session = Depends(get_db)): return db.scalars(active(select(Bag), Bag)).all()
+@router.get('/bags/{bag_id}', response_model=BagOut)
+def get_bag(bag_id: UUID, db: Session = Depends(get_db)):
+    bag = db.scalar(active(select(Bag).where(Bag.id == bag_id), Bag))
+    if not bag: raise HTTPException(404, 'Bag not found')
+    return bag
+@router.put('/bags/{bag_id}', response_model=BagOut)
+def update_bag(bag_id: UUID, data: BagIn, db: Session = Depends(get_db)):
+    bag = db.scalar(active(select(Bag).where(Bag.id == bag_id), Bag))
+    if not bag: raise HTTPException(404, 'Bag not found')
+    for key, value in data.model_dump().items(): setattr(bag, key, value)
+    db.commit(); db.refresh(bag); return bag
+@router.post('/bags/{bag_id}/status', response_model=BagOut)
+def set_bag_status(bag_id: UUID, status: str, db: Session = Depends(get_db)):
+    if status not in {'draft','published','unpublished','archived'}: raise HTTPException(422, 'Invalid bag status')
+    bag = db.scalar(active(select(Bag).where(Bag.id == bag_id), Bag))
+    if not bag: raise HTTPException(404, 'Bag not found')
+    bag.status = status
+    if status == 'archived':
+        from datetime import datetime, timezone
+        bag.deleted_at = datetime.now(timezone.utc)
+    db.commit(); db.refresh(bag); return bag
+@router.get('/bags/{bag_id}/embroidery-area', response_model=AreaOut)
+def get_area(bag_id: UUID, db: Session = Depends(get_db)):
+    area = db.scalar(select(EmbroideryArea).where(EmbroideryArea.bag_id == bag_id))
+    if not area: raise HTTPException(404, 'Embroidery area not found')
+    return area
 @router.post('/bags/{bag_id}/embroidery-area', response_model=AreaOut)
 def set_area(bag_id: UUID, data: AreaIn, db: Session = Depends(get_db)):
     if not db.get(Bag, bag_id): raise HTTPException(404, 'Bag not found')
