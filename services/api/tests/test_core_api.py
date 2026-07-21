@@ -63,3 +63,9 @@ def test_rejects_out_of_bounds_and_client_size_tampering(client: TestClient) -> 
     assert invalid.status_code == 422
     tampered = client.post('/api/designs', json={'bag_id': bag, 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5, 'width_mm': 999}]})
     assert tampered.status_code == 422
+
+def test_delete_design_for_own_client(client: TestClient) -> None:
+    asset, version = setup_catalog(client); bag = setup_bag(client, asset)
+    created = client.post('/api/designs', json={'bag_id': bag, 'client_key': 'test-client-key', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5}]}).json()
+    deleted = client.delete(f"/api/designs/{created['id']}?client_key=test-client-key")
+    assert deleted.status_code == 204

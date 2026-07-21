@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import AppSetting, Bag, EmbroideryArea, FileAsset, Pattern, PatternCategory, PatternVersion, DesignItem
+from app.models import AppSetting, Bag, Design, EmbroideryArea, FileAsset, Pattern, PatternCategory, PatternVersion, DesignItem
 from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
 from app.services.storage import StorageService
