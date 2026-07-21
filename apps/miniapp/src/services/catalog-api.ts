@@ -14,5 +14,6 @@ export const catalogApi = {
   bags: () => request<ApiBag[]>('/catalog/bags'),
   categories: () => request<ApiCategory[]>('/catalog/pattern-categories'),
   patterns: () => request<ApiPattern[]>('/catalog/patterns'),
-  saveDesign: (data: { bag_id: string; items: Array<{ pattern_version_id: string; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number }> }) => request<ApiDesign>('/designs', 'POST', data),
+  limit: () => request<{ max_drafts: number }>('/settings/design-limit'),
+  saveDesign: (data: { bag_id: string; client_key: string; items: Array<{ pattern_version_id: string; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number }> }) => request<ApiDesign>('/designs', 'POST', data),
 }
