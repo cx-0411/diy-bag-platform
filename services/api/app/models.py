@@ -77,3 +77,4 @@ class DesignItem(Timestamped):
     center_x_ratio: Mapped[float] = mapped_column(Numeric(9, 6))
     center_y_ratio: Mapped[float] = mapped_column(Numeric(9, 6))
     rotation_degrees: Mapped[int] = mapped_column(Integer, default=0)
+    z_index: Mapped[int] = mapped_column(Integer, default=0)

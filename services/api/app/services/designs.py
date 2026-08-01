@@ -1,4 +1,5 @@
 from decimal import Decimal
+from math import cos, radians, sin
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ def create_design(session: Session, payload: DesignIn) -> Design:
     total = bag.base_price_cents
     design = Design(bag_id=bag.id, client_key=payload.client_key, total_price_cents=0); session.add(design); session.flush()
     for item in payload.items:
-        version = versions[item.pattern_version_id]; x = Decimal(str(item.center_x_ratio)); y = Decimal(str(item.center_y_ratio)); half_w = Decimal(version.width_mm) / Decimal(area.width_mm) / 2; half_h = Decimal(version.height_mm) / Decimal(area.height_mm) / 2
+        version = versions[item.pattern_version_id]; x = Decimal(str(item.center_x_ratio)); y = Decimal(str(item.center_y_ratio)); angle = radians(item.rotation_degrees); rotated_width = Decimal(str(abs(version.width_mm * cos(angle)) + abs(version.height_mm * sin(angle)))); rotated_height = Decimal(str(abs(version.width_mm * sin(angle)) + abs(version.height_mm * cos(angle)))); half_w = rotated_width / Decimal(area.width_mm) / 2; half_h = rotated_height / Decimal(area.height_mm) / 2
         if x < half_w or x > 1-half_w or y < half_h or y > 1-half_h: raise HTTPException(422, 'Pattern must remain completely inside embroidery area')
-        session.add(DesignItem(design_id=design.id, pattern_version_id=version.id, center_x_ratio=x, center_y_ratio=y)); total += version.price_cents
+        session.add(DesignItem(design_id=design.id, pattern_version_id=version.id, center_x_ratio=x, center_y_ratio=y, rotation_degrees=item.rotation_degrees, z_index=item.z_index)); total += version.price_cents
     design.total_price_cents = total; session.flush(); return design
