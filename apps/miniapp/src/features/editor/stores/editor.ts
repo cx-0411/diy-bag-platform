@@ -83,7 +83,8 @@ export const useEditorStore = defineStore('editor', () => {
       const [bags, apiCategories, apiPatterns, limit] = await Promise.all([catalogApi.bags(), catalogApi.categories(), catalogApi.patterns(), catalogApi.limit()])
       maxDrafts.value = limit.max_drafts
       const choices = bags.map(toBag); if (!choices.length) throw new Error('暂无已上架且已配置刺绣区域的包包'); availableBags.value = choices
-      categories.value = apiCategories.map((item) => ({ id: item.id, name: item.name, icon: item.icon, description: item.description }))
+      // Hide the legacy numeric test category instead of exposing a database/debug value to customers.
+      categories.value = apiCategories.filter((item) => item.name.trim() !== '1').map((item) => ({ id: item.id, name: item.name, icon: item.icon, description: item.description }))
       catalog.value = apiPatterns.map((item) => ({ id: item.id, categoryId: item.category_id, name: item.name, imageUrl: `http://localhost:8000${item.image_url}`, width: item.width_mm, height: item.height_mm, priceCents: item.price_cents, patternVersionId: item.pattern_version_id }))
       bag.value = choices.find((item) => item.id === bagId) ?? choices[0]
       activeCategoryId.value = categories.value[0]?.id ?? ''
