@@ -1,5 +1,6 @@
 import shutil
 import uuid
+from io import BytesIO
 from pathlib import Path
 from fastapi import UploadFile
 from app.core.config import get_settings
@@ -9,4 +10,11 @@ class StorageService:
         suffix = Path(upload.filename or '').suffix.lower(); key = f'{uuid.uuid4()}{suffix}'; target = self.root / key
         with target.open('wb') as output: shutil.copyfileobj(upload.file, output)
         return key, target.stat().st_size
+    def save_bytes(self, content: bytes, suffix: str = '.png') -> tuple[str, int]:
+        key = f'{uuid.uuid4()}{suffix}'
+        target = self.root / key
+        target.write_bytes(content)
+        return key, len(content)
+    def path_for(self, key: str) -> Path:
+        return self.root / key
     def url(self, key: str) -> str: return f'/api/files/{key}'

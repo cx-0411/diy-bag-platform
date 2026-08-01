@@ -24,6 +24,7 @@ class FileAsset(Timestamped):
     storage_key: Mapped[str] = mapped_column(String(500), unique=True)
     content_type: Mapped[str] = mapped_column(String(100))
     size_bytes: Mapped[int] = mapped_column(Integer)
+    visibility: Mapped[str] = mapped_column(String(20), default='public')
 class AppSetting(Timestamped):
     __tablename__ = 'app_settings'
     key: Mapped[str] = mapped_column(String(100), unique=True)
@@ -80,7 +81,7 @@ class DesignItem(Timestamped):
     z_index: Mapped[int] = mapped_column(Integer, default=0)
 class DesignAsset(Timestamped):
     __tablename__ = 'design_assets'
-    design_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('designs.id'))
+    design_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('designs.id'), unique=True)
     preview_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey('file_assets.id'), nullable=True)
     production_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey('file_assets.id'), nullable=True)
 class Order(Timestamped):

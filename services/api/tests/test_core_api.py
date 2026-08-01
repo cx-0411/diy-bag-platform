@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from io import BytesIO
 from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
@@ -8,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import app
 from app.models import FileAsset
+from app.services.storage import StorageService
 
 @pytest.fixture()
 def client() -> Generator[TestClient, None, None]:
@@ -30,12 +32,22 @@ def asset_id(client: TestClient) -> str:
         session.add(asset); session.commit()
         return str(asset.id)
 
-def setup_catalog(client: TestClient) -> tuple[str, str]:
-    asset = asset_id(client)
+def setup_catalog(client: TestClient, asset: str | None = None) -> tuple[str, str]:
+    asset = asset or asset_id(client)
     category = client.post('/api/pattern-categories', json={'name': '花植'}).json()
     pattern = client.post('/api/patterns', json={'category_id': category['id'], 'name': '花朵', 'production_code': 'FLOWER-1', 'status': 'published', 'image_asset_id': asset, 'width_mm': 42, 'height_mm': 42, 'price_cents': 1200}).json()
     version = client.get(f"/api/patterns/{pattern['id']}/versions").json()[0]
     return asset, version['id']
+
+def image_asset_id(client: TestClient) -> str:
+    from PIL import Image
+    image = Image.new('RGBA', (400, 400), (245, 235, 220, 255))
+    content = BytesIO(); image.save(content, 'PNG')
+    key, size = StorageService().save_bytes(content.getvalue())
+    with client.app.state.test_session_factory() as session:
+        asset = FileAsset(original_name='source.png', storage_key=key, content_type='image/png', size_bytes=size)
+        session.add(asset); session.commit()
+        return str(asset.id)
 
 def setup_bag(client: TestClient, asset: str) -> str:
     bag = client.post('/api/bags', json={'name': '托特包', 'image_asset_id': asset, 'width_mm': 280, 'height_mm': 220, 'base_price_cents': 15900, 'status': 'published'}).json()
@@ -92,3 +104,21 @@ def test_order_uses_immutable_snapshot_recalculated_price_and_mock_payment(clien
     assert paid.status_code == 200
     assert paid.json()['status'] == 'PAID'
     assert client.post(f"/api/orders/{order['id']}/mock-pay?client_key=test-client-key").status_code == 409
+
+def test_preview_and_paid_production_image_are_rendered_with_correct_visibility(client: TestClient) -> None:
+    asset, version = setup_catalog(client, image_asset_id(client)); bag = setup_bag(client, asset)
+    design = client.post('/api/designs', json={'bag_id': bag, 'client_key': 'render-client', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5}]}).json()
+    preview = client.post(f"/api/designs/{design['id']}/preview?client_key=render-client")
+    assert preview.status_code == 200
+    assert client.get(preview.json()['url']).status_code == 200
+    order = client.post('/api/orders', json={'design_id': design['id'], 'client_key': 'render-client'}).json()
+    assert client.get(f"/api/admin/orders/{order['id']}/production-image").status_code == 409
+    assert client.post(f"/api/orders/{order['id']}/mock-pay?client_key=render-client").status_code == 200
+    production = client.get(f"/api/admin/orders/{order['id']}/production-image")
+    assert production.status_code == 200
+    with client.app.state.test_session_factory() as session:
+        from app.models import Order
+        production_asset_id = session.get(Order, UUID(order['id'])).snapshot['production_asset_id']
+        asset_record = session.get(FileAsset, UUID(production_asset_id))
+        assert asset_record.visibility == 'private'
+        assert client.get(f'/api/files/{asset_record.storage_key}').status_code == 404

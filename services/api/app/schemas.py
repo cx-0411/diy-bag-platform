@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,4 +24,4 @@ class DesignOut(APIModel): id: UUID; bag_id: UUID; total_price_cents: int; items
 class DesignLimitIn(APIModel): max_drafts: int = Field(ge=1, le=20)
 class DesignLimitOut(DesignLimitIn): pass
 class OrderCreateIn(APIModel): design_id: UUID; client_key: str = Field(min_length=8, max_length=64)
-class OrderOut(APIModel): id: UUID; order_no: str; design_id: UUID; status: str; total_price_cents: int; created_at: object; paid_at: object | None = None
+class OrderOut(APIModel): id: UUID; order_no: str; design_id: UUID; status: str; total_price_cents: int; created_at: datetime; paid_at: datetime | None = None

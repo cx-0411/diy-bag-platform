@@ -9,6 +9,7 @@ from app.models import AppSetting, Bag, Design, EmbroideryArea, FileAsset, Order
 from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
 from app.services.orders import create_order, mock_pay
+from app.services.rendering import render_design_preview, render_order_production
 from app.services.storage import StorageService
 router = APIRouter()
 def active(statement, model): return statement.where(model.deleted_at.is_(None))
@@ -29,7 +30,9 @@ def upload(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.content_type or not file.content_type.startswith('image/'): raise HTTPException(415, 'Only image uploads are supported')
     storage = StorageService(); key, size = storage.save_upload(file); asset = FileAsset(original_name=file.filename or key, storage_key=key, content_type=file.content_type, size_bytes=size); db.add(asset); db.commit(); db.refresh(asset); return AssetOut(id=asset.id, original_name=asset.original_name, content_type=asset.content_type, size_bytes=asset.size_bytes, url=storage.url(key))
 @router.get('/files/{key}')
-def download(key: str):
+def download(key: str, db: Session = Depends(get_db)):
+    asset = db.scalar(select(FileAsset).where(FileAsset.storage_key == key))
+    if not asset or asset.visibility != 'public': raise HTTPException(404, 'File not found')
     target = Path(StorageService().root) / key
     if not target.is_file(): raise HTTPException(404, 'File not found')
     return FileResponse(target)
@@ -122,6 +125,12 @@ def delete_design(design_id: UUID, client_key: str, db: Session = Depends(get_db
     if not design: raise HTTPException(404, 'Design not found')
     db.query(DesignItem).filter(DesignItem.design_id == design.id).delete()
     db.delete(design); db.commit()
+@router.post('/designs/{design_id}/preview', response_model=AssetOut)
+def render_preview(design_id: UUID, client_key: str, db: Session = Depends(get_db)):
+    design = db.scalar(select(Design).where(Design.id == design_id, Design.client_key == client_key))
+    if not design: raise HTTPException(404, 'Design not found')
+    asset = render_design_preview(db, design); db.commit(); db.refresh(asset)
+    return AssetOut(id=asset.id, original_name=asset.original_name, content_type=asset.content_type, size_bytes=asset.size_bytes, url=StorageService().url(asset.storage_key))
 @router.post('/orders', response_model=OrderOut)
 def create_mock_order(data: OrderCreateIn, db: Session = Depends(get_db)):
     order = create_order(db, data.design_id, data.client_key); db.commit(); db.refresh(order); return order
@@ -131,3 +140,9 @@ def pay_mock_order(order_id: UUID, client_key: str, db: Session = Depends(get_db
 @router.get('/admin/orders', response_model=list[OrderOut])
 def list_orders(db: Session = Depends(get_db)):
     return db.scalars(select(Order).order_by(Order.created_at.desc())).all()
+@router.get('/admin/orders/{order_id}/production-image')
+def get_production_image(order_id: UUID, db: Session = Depends(get_db)):
+    order = db.get(Order, order_id)
+    if not order: raise HTTPException(404, 'Order not found')
+    asset = render_order_production(db, order); db.commit()
+    return FileResponse(StorageService().path_for(asset.storage_key), media_type=asset.content_type, filename=asset.original_name)

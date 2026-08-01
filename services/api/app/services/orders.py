@@ -3,13 +3,16 @@ from uuid import uuid4
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models import Bag, Design, DesignItem, FileAsset, Order, OrderItem, Pattern, PatternVersion
+from app.models import Bag, Design, DesignItem, EmbroideryArea, FileAsset, Order, OrderItem, Pattern, PatternVersion
+from app.services.designs import ensure_item_within_area
 
 def create_order(session: Session, design_id, client_key: str) -> Order:
     design = session.scalar(select(Design).where(Design.id == design_id, Design.client_key == client_key))
     if not design: raise HTTPException(404, 'Design not found')
     bag = session.get(Bag, design.bag_id)
     if not bag or bag.deleted_at or bag.status != 'published': raise HTTPException(409, 'Bag is not available')
+    area = session.scalar(select(EmbroideryArea).where(EmbroideryArea.bag_id == bag.id))
+    if not area: raise HTTPException(409, 'Bag has no embroidery area')
     items = session.scalars(select(DesignItem).where(DesignItem.design_id == design.id).order_by(DesignItem.z_index)).all()
     versions = {item.id: item for item in session.scalars(select(PatternVersion).where(PatternVersion.id.in_([row.pattern_version_id for row in items])))}
     bag_asset = session.get(FileAsset, bag.image_asset_id)
@@ -21,6 +24,12 @@ def create_order(session: Session, design_id, client_key: str) -> Order:
         pattern = session.get(Pattern, version.pattern_id)
         if not pattern or pattern.deleted_at or pattern.status != 'published':
             raise HTTPException(409, 'Pattern is unavailable')
+        ensure_item_within_area(
+            center_x_ratio=row.center_x_ratio, center_y_ratio=row.center_y_ratio,
+            width_mm=version.width_mm, height_mm=version.height_mm,
+            area_width_mm=area.width_mm, area_height_mm=area.height_mm,
+            rotation_degrees=row.rotation_degrees,
+        )
         image_asset = session.get(FileAsset, version.image_asset_id)
         total += version.price_cents
         item_snapshot = {
@@ -40,6 +49,11 @@ def create_order(session: Session, design_id, client_key: str) -> Order:
             'bag': {'id': str(bag.id), 'name': bag.name, 'image_asset_id': str(bag.image_asset_id),
                     'image_storage_key': bag_asset.storage_key if bag_asset else None,
                     'price_cents': bag.base_price_cents},
+            'embroidery_area': {
+                'relative_x': float(area.relative_x), 'relative_y': float(area.relative_y),
+                'relative_width': float(area.relative_width), 'relative_height': float(area.relative_height),
+                'width_mm': area.width_mm, 'height_mm': area.height_mm,
+            },
             'items': [snapshot for _, snapshot in snapshot_items],
         },
     )
