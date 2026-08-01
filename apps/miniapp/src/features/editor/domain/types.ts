@@ -3,6 +3,8 @@ export interface SizeMm { width: number; height: number }
 export interface EmbroideryArea extends SizeMm {
   relativeX: number
   relativeY: number
+  relativeWidth: number
+  relativeHeight: number
 }
 
 export interface BagDefinition extends SizeMm {
@@ -13,7 +15,7 @@ export interface BagDefinition extends SizeMm {
   embroideryArea: EmbroideryArea
 }
 
-export interface PatternCategory { id: string; name: string }
+export interface PatternCategory { id: string; name: string; icon?: string; description?: string }
 
 export interface PatternDefinition extends SizeMm {
   id: string
@@ -32,6 +34,7 @@ export interface PatternPlacement {
   centerYRatio: number
   /** Rotation is allowed; physical size remains fixed. */
   rotationDegrees: number
+  zIndex: number
 }
 
 export interface PixelSize { width: number; height: number }

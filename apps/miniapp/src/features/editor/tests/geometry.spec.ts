@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { clampPlacement, millimetresToPixels, placementPixelPoint, pixelPointToPlacement } from '../domain/geometry'
 import type { EmbroideryArea, PatternDefinition, PatternPlacement } from '../domain/types'
-const area: EmbroideryArea = { width: 180, height: 120, relativeX: .2, relativeY: .28 }
+const area: EmbroideryArea = { width: 180, height: 120, relativeX: .2, relativeY: .28, relativeWidth: .6, relativeHeight: .5 }
 const pattern: PatternDefinition = { id: 'p', categoryId: 'c', name: '测试', imageUrl: '', width: 42, height: 42, priceCents: 1200 }
-const placement: PatternPlacement = { id: 'a', patternId: 'p', centerXRatio: .5, centerYRatio: .5, rotationDegrees: 0 }
+const placement: PatternPlacement = { id: 'a', patternId: 'p', centerXRatio: .5, centerYRatio: .5, rotationDegrees: 0, zIndex: 0 }
 describe('DIY editor geometry', () => {
   it('converts millimetres to pixels', () => expect(millimetresToPixels(42, 180, 360)).toBe(84))
   it('converts ratio coordinates to pixels', () => expect(placementPixelPoint(placement, pattern, area, { width: 360, height: 240 })).toEqual({ x: 138, y: 78 }))

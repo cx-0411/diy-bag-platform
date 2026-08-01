@@ -82,6 +82,15 @@ def test_delete_design_for_own_client(client: TestClient) -> None:
     deleted = client.delete(f"/api/designs/{created['id']}?client_key=test-client-key")
     assert deleted.status_code == 204
 
+def test_lists_saved_designs_for_its_client_only(client: TestClient) -> None:
+    asset, version = setup_catalog(client); bag = setup_bag(client, asset)
+    client.post('/api/designs', json={'bag_id': bag, 'client_key': 'client-allowed', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5, 'z_index': 3}]})
+    client.post('/api/designs', json={'bag_id': bag, 'client_key': 'client-private', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5}]})
+    designs = client.get('/api/designs?client_key=client-allowed')
+    assert designs.status_code == 200
+    assert len(designs.json()) == 1
+    assert designs.json()[0]['items'][0]['z_index'] == 3
+
 def test_order_uses_immutable_snapshot_recalculated_price_and_mock_payment(client: TestClient) -> None:
     asset, version = setup_catalog(client); bag = setup_bag(client, asset)
     design = client.post('/api/designs', json={

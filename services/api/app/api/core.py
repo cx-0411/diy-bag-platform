@@ -132,6 +132,10 @@ def versions(pattern_id: UUID, db: Session = Depends(get_db)): return db.scalars
 @router.post('/designs', response_model=DesignOut)
 def save_design(data: DesignIn, db: Session = Depends(get_db)):
     design = create_design(db, data); db.commit(); db.refresh(design); items = db.scalars(select(DesignItem).where(DesignItem.design_id == design.id)).all(); return DesignOut(id=design.id, bag_id=design.bag_id, total_price_cents=design.total_price_cents, items=[DesignItemOut.model_validate(item) for item in items])
+@router.get('/designs', response_model=list[DesignOut])
+def list_designs(client_key: str, db: Session = Depends(get_db)):
+    designs = db.scalars(select(Design).where(Design.client_key == client_key).order_by(Design.created_at.desc())).all()
+    return [DesignOut(id=design.id, bag_id=design.bag_id, total_price_cents=design.total_price_cents, items=[DesignItemOut.model_validate(item) for item in db.scalars(select(DesignItem).where(DesignItem.design_id == design.id).order_by(DesignItem.z_index, DesignItem.created_at))]) for design in designs]
 @router.delete('/designs/{design_id}', status_code=204)
 def delete_design(design_id: UUID, client_key: str, db: Session = Depends(get_db)):
     design = db.scalar(select(Design).where(Design.id == design_id, Design.client_key == client_key))
