@@ -140,6 +140,8 @@ def list_designs(client_key: str, db: Session = Depends(get_db)):
 def delete_design(design_id: UUID, client_key: str, db: Session = Depends(get_db)):
     design = db.scalar(select(Design).where(Design.id == design_id, Design.client_key == client_key))
     if not design: raise HTTPException(404, 'Design not found')
+    if db.scalar(select(CartItem.id).where(CartItem.design_id == design.id)) or db.scalar(select(Order.id).where(Order.design_id == design.id)):
+        raise HTTPException(409, 'Design is referenced by a cart item or order and cannot be deleted')
     db.query(DesignItem).filter(DesignItem.design_id == design.id).delete()
     db.delete(design); db.commit()
 @router.post('/cart-items', response_model=CartItemOut)

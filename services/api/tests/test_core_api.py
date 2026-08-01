@@ -101,6 +101,7 @@ def test_cart_keeps_each_design_as_a_separate_item(client: TestClient) -> None:
     assert first['id'] != second['id']
     assert client.delete(f"/api/cart-items/{first['id']}?client_key=cart-client").status_code == 204
     assert len(client.get('/api/cart-items?client_key=cart-client').json()) == 1
+    assert client.delete(f"/api/designs/{created['id']}?client_key=cart-client").status_code == 409
 
 def test_order_uses_immutable_snapshot_recalculated_price_and_mock_payment(client: TestClient) -> None:
     asset, version = setup_catalog(client); bag = setup_bag(client, asset)
