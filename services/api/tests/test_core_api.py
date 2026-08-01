@@ -113,6 +113,12 @@ def test_order_uses_immutable_snapshot_recalculated_price_and_mock_payment(clien
     assert paid.status_code == 200
     assert paid.json()['status'] == 'PAID'
     assert client.post(f"/api/orders/{order['id']}/mock-pay?client_key=test-client-key").status_code == 409
+    assert client.post(f"/api/admin/orders/{order['id']}/status", json={'status': 'TO_PRODUCE'}).json()['status'] == 'TO_PRODUCE'
+    assert client.post(f"/api/admin/orders/{order['id']}/status", json={'status': 'PRODUCING'}).json()['status'] == 'PRODUCING'
+    assert client.post(f"/api/admin/orders/{order['id']}/status", json={'status': 'SHIPPED'}).status_code == 422
+    shipped = client.post(f"/api/admin/orders/{order['id']}/status", json={'status': 'SHIPPED', 'tracking_no': 'SF123'})
+    assert shipped.json()['tracking_no'] == 'SF123'
+    assert client.post(f"/api/admin/orders/{order['id']}/status", json={'status': 'COMPLETED'}).json()['status'] == 'COMPLETED'
 
 def test_preview_and_paid_production_image_are_rendered_with_correct_visibility(client: TestClient) -> None:
     asset, version = setup_catalog(client, image_asset_id(client)); bag = setup_bag(client, asset)

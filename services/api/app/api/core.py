@@ -6,9 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import AppSetting, Bag, Design, EmbroideryArea, FileAsset, Order, Pattern, PatternCategory, PatternVersion, DesignItem
-from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, CategoryUpdateIn, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, PatternIn, PatternOut, PatternVersionOut
+from app.schemas import AdminOrderOut, AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, CategoryUpdateIn, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, OrderStatusIn, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
-from app.services.orders import create_order, mock_pay
+from app.services.orders import create_order, mock_pay, update_production_status
 from app.services.rendering import render_design_preview, render_order_production
 from app.services.storage import StorageService
 router = APIRouter()
@@ -154,9 +154,12 @@ def create_mock_order(data: OrderCreateIn, db: Session = Depends(get_db)):
 @router.post('/orders/{order_id}/mock-pay', response_model=OrderOut)
 def pay_mock_order(order_id: UUID, client_key: str, db: Session = Depends(get_db)):
     order = mock_pay(db, order_id, client_key); db.commit(); db.refresh(order); return order
-@router.get('/admin/orders', response_model=list[OrderOut])
+@router.get('/admin/orders', response_model=list[AdminOrderOut])
 def list_orders(db: Session = Depends(get_db)):
     return db.scalars(select(Order).order_by(Order.created_at.desc())).all()
+@router.post('/admin/orders/{order_id}/status', response_model=AdminOrderOut)
+def set_order_status(order_id: UUID, data: OrderStatusIn, db: Session = Depends(get_db)):
+    order = update_production_status(db, order_id, data.status, data.tracking_no); db.commit(); db.refresh(order); return order
 @router.get('/admin/orders/{order_id}/production-image')
 def get_production_image(order_id: UUID, db: Session = Depends(get_db)):
     order = db.get(Order, order_id)

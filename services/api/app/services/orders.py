@@ -67,3 +67,20 @@ def mock_pay(session: Session, order_id, client_key: str) -> Order:
     if not order: raise HTTPException(404, 'Order not found')
     if order.status != 'PENDING_PAYMENT': raise HTTPException(409, 'Order cannot be paid')
     order.status = 'PAID'; order.paid_at = datetime.now(timezone.utc); return order
+
+
+def update_production_status(session: Session, order_id, status: str, tracking_no: str | None = None) -> Order:
+    order = session.get(Order, order_id)
+    if not order: raise HTTPException(404, 'Order not found')
+    allowed = {
+        'PENDING_PAYMENT': {'CANCELLED'}, 'PAID': {'TO_PRODUCE', 'CANCELLED'},
+        'TO_PRODUCE': {'PRODUCING', 'CANCELLED'}, 'PRODUCING': {'SHIPPED'},
+        'SHIPPED': {'COMPLETED'}, 'COMPLETED': set(), 'CANCELLED': set(),
+    }
+    if status not in allowed.get(order.status, set()):
+        raise HTTPException(409, f'Cannot change {order.status} to {status}')
+    if status == 'SHIPPED' and not tracking_no:
+        raise HTTPException(422, 'Tracking number is required before shipping')
+    order.status = status
+    if tracking_no: order.tracking_no = tracking_no
+    return order

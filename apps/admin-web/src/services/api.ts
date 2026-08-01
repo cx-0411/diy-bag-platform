@@ -1,45 +1,18 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api'
-
 export interface Bag { id: string; name: string; image_asset_id: string; width_mm: number; height_mm: number; base_price_cents: number; status: string }
 export interface EmbroideryArea { id: string; bag_id: string; relative_x: number; relative_y: number; relative_width: number; relative_height: number; width_mm: number; height_mm: number }
 export interface Asset { id: string; original_name: string; content_type: string; size_bytes: number; url: string }
-export interface PatternCategory { id: string; name: string; sort_order: number }
+export interface PatternCategory { id: string; name: string; sort_order: number; icon: string; description: string; is_active: boolean }
 export interface Pattern { id: string; category_id: string; name: string; production_code: string; status: string; current_version_id: string | null }
 export interface PatternPayload { category_id: string; name: string; production_code: string; status: string; image_asset_id: string; width_mm: number; height_mm: number; price_cents: number }
 export interface PatternVersion { id: string; pattern_id: string; version_number: number; image_asset_id: string; width_mm: number; height_mm: number; price_cents: number }
-
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, { headers: { 'Content-Type': 'application/json', ...init.headers }, ...init })
-  if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `请求失败（${response.status}）`) }
-  return response.json() as Promise<T>
-}
-export const bagApi = {
-  list: () => request<Bag[]>('/bags'),
-  get: (id: string) => request<Bag>(`/bags/${id}`),
-  create: (data: Omit<Bag, 'id'>) => request<Bag>('/bags', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: Omit<Bag, 'id'>) => request<Bag>(`/bags/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  setStatus: (id: string, status: string) => request<Bag>(`/bags/${id}/status?status=${status}`, { method: 'POST' }),
-  area: (id: string) => request<EmbroideryArea>(`/bags/${id}/embroidery-area`),
-  saveArea: (id: string, data: Omit<EmbroideryArea, 'id' | 'bag_id'>) => request<EmbroideryArea>(`/bags/${id}/embroidery-area`, { method: 'POST', body: JSON.stringify(data) }),
-}
-export const categoryApi = {
-  list: () => request<PatternCategory[]>('/pattern-categories'),
-  create: (data: Omit<PatternCategory, 'id'>) => request<PatternCategory>('/pattern-categories', { method: 'POST', body: JSON.stringify(data) }),
-}
-export const patternApi = {
-  list: () => request<Pattern[]>('/patterns'),
-  create: (data: PatternPayload) => request<Pattern>('/patterns', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: PatternPayload) => request<Pattern>(`/patterns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  versions: (id: string) => request<PatternVersion[]>(`/patterns/${id}/versions`),
-}
-export const settingApi = {
-  getDesignLimit: () => request<{ max_drafts: number }>('/settings/design-limit'),
-  setDesignLimit: (max_drafts: number) => request<{ max_drafts: number }>('/admin/settings/design-limit', { method: 'PUT', body: JSON.stringify({ max_drafts }) }),
-}
-export async function uploadImage(file: File): Promise<Asset> {
-  const data = new FormData(); data.append('file', file)
-  const response = await fetch(`${API_BASE_URL}/files`, { method: 'POST', body: data })
-  if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `上传失败（${response.status}）`) }
-  return response.json() as Promise<Asset>
-}
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> { const response = await fetch(`${API_BASE_URL}${path}`, { headers: { 'Content-Type': 'application/json', ...init.headers }, ...init }); if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `请求失败（${response.status}）`) }; if (response.status === 204) return undefined as T; return response.json() as Promise<T> }
+export const bagApi = { list: () => request<Bag[]>('/bags'), get: (id: string) => request<Bag>(`/bags/${id}`), create: (data: Omit<Bag, 'id'>) => request<Bag>('/bags', { method: 'POST', body: JSON.stringify(data) }), update: (id: string, data: Omit<Bag, 'id'>) => request<Bag>(`/bags/${id}`, { method: 'PUT', body: JSON.stringify(data) }), setStatus: (id: string, status: string) => request<Bag>(`/bags/${id}/status?status=${status}`, { method: 'POST' }), area: (id: string) => request<EmbroideryArea>(`/bags/${id}/embroidery-area`), saveArea: (id: string, data: Omit<EmbroideryArea, 'id' | 'bag_id'>) => request<EmbroideryArea>(`/bags/${id}/embroidery-area`, { method: 'POST', body: JSON.stringify(data) }) }
+export type PatternCategoryPayload = Omit<PatternCategory, 'id' | 'icon' | 'description' | 'is_active'> & Partial<Pick<PatternCategory, 'icon' | 'description' | 'is_active'>>
+export const categoryApi = { list: () => request<PatternCategory[]>('/pattern-categories'), create: (data: PatternCategoryPayload) => request<PatternCategory>('/pattern-categories', { method: 'POST', body: JSON.stringify(data) }), update: (id: string, data: PatternCategoryPayload) => request<PatternCategory>(`/pattern-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }), archive: (id: string) => request<PatternCategory>(`/pattern-categories/${id}/archive`, { method: 'POST' }) }
+export const patternApi = { list: () => request<Pattern[]>('/patterns'), create: (data: PatternPayload) => request<Pattern>('/patterns', { method: 'POST', body: JSON.stringify(data) }), update: (id: string, data: PatternPayload) => request<Pattern>(`/patterns/${id}`, { method: 'PUT', body: JSON.stringify(data) }), versions: (id: string) => request<PatternVersion[]>(`/patterns/${id}/versions`) }
+export const settingApi = { getDesignLimit: () => request<{ max_drafts: number }>('/settings/design-limit'), setDesignLimit: (max_drafts: number) => request<{ max_drafts: number }>('/admin/settings/design-limit', { method: 'PUT', body: JSON.stringify({ max_drafts }) }) }
+export interface AdminOrder { id: string; order_no: string; design_id: string; status: string; total_price_cents: number; created_at: string; paid_at: string | null; tracking_no: string | null; snapshot: { bag: { name: string; price_cents: number }; items: Array<{ name: string; width_mm: number; height_mm: number; price_cents: number; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number }> } }
+export const orderApi = { list: () => request<AdminOrder[]>('/admin/orders'), setStatus: (id: string, status: string, trackingNo?: string) => request<AdminOrder>(`/admin/orders/${id}/status`, { method: 'POST', body: JSON.stringify({ status, tracking_no: trackingNo || null }) }), productionImage: (id: string) => `${API_BASE_URL}/admin/orders/${id}/production-image` }
+export async function uploadImage(file: File): Promise<Asset> { const data = new FormData(); data.append('file', file); const response = await fetch(`${API_BASE_URL}/files`, { method: 'POST', body: data }); if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `上传失败（${response.status}）`) }; return response.json() as Promise<Asset> }
 export const fileApi = { get: (id: string) => request<Asset>(`/file-assets/${id}`) }

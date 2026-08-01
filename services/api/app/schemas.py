@@ -31,3 +31,5 @@ class DesignLimitIn(APIModel): max_drafts: int = Field(ge=1, le=20)
 class DesignLimitOut(DesignLimitIn): pass
 class OrderCreateIn(APIModel): design_id: UUID; client_key: str = Field(min_length=8, max_length=64)
 class OrderOut(APIModel): id: UUID; order_no: str; design_id: UUID; status: str; total_price_cents: int; created_at: datetime; paid_at: datetime | None = None
+class AdminOrderOut(OrderOut): snapshot: dict; tracking_no: str | None = None
+class OrderStatusIn(APIModel): status: str = Field(min_length=1, max_length=30); tracking_no: str | None = Field(default=None, max_length=100)

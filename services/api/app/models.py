@@ -96,6 +96,7 @@ class Order(Timestamped):
     total_price_cents: Mapped[int] = mapped_column(Integer)
     snapshot: Mapped[dict] = mapped_column(JSON)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    tracking_no: Mapped[str | None] = mapped_column(String(100), nullable=True)
 class OrderItem(Timestamped):
     __tablename__ = 'order_items'
     order_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('orders.id'))

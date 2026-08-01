@@ -1,1 +1,15 @@
-<template><section><h2>订单管理</h2><el-empty description="功能将在后续阶段实现" /></section></template>
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { orderApi, type AdminOrder } from '../services/api'
+const orders = ref<AdminOrder[]>([]); const loading = ref(false); const detail = ref<AdminOrder | null>(null)
+const labels: Record<string, string> = { PENDING_PAYMENT: '待付款', PAID: '已付款', TO_PRODUCE: '待制作', PRODUCING: '制作中', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消' }
+const next: Record<string, [string, string] | undefined> = { PAID: ['TO_PRODUCE', '进入待制作'], TO_PRODUCE: ['PRODUCING', '开始制作'], PRODUCING: ['SHIPPED', '发货'], SHIPPED: ['COMPLETED', '完成订单'] }
+const price = (cents: number) => `¥${(cents / 100).toFixed(2)}`
+async function load(): Promise<void> { loading.value = true; try { orders.value = await orderApi.list() } catch (e) { ElMessage.error(e instanceof Error ? e.message : '订单加载失败') } finally { loading.value = false } }
+async function advance(row: AdminOrder): Promise<void> { const step = next[row.status]; if (!step) return; try { let tracking: string | undefined; if (step[0] === 'SHIPPED') tracking = (await ElMessageBox.prompt('请输入物流单号', '发货确认', { inputPattern: /\S+/, inputErrorMessage: '物流单号不能为空' })).value; await orderApi.setStatus(row.id, step[0], tracking); ElMessage.success('状态已更新'); await load() } catch (e) { if (e !== 'cancel') ElMessage.error(e instanceof Error ? e.message : '更新失败') } }
+function openProduction(id: string): void { window.open(orderApi.productionImage(id), '_blank') }
+onMounted(load)
+</script>
+<template><section><el-page-header content="订单管理"/><div class="toolbar"><el-button @click="load">刷新</el-button></div><el-table :data="orders" v-loading="loading"><el-table-column prop="order_no" label="订单号" min-width="190"/><el-table-column label="包包"><template #default="{ row }">{{ row.snapshot.bag.name }}</template></el-table-column><el-table-column label="金额"><template #default="{ row }">{{ price(row.total_price_cents) }}</template></el-table-column><el-table-column label="状态"><template #default="{ row }"><el-tag>{{ labels[row.status] || row.status }}</el-tag></template></el-table-column><el-table-column label="操作" width="280"><template #default="{ row }"><el-button link @click="detail = row">详情</el-button><el-button v-if="row.status !== 'PENDING_PAYMENT'" link @click="openProduction(row.id)">生产图</el-button><el-button v-if="next[row.status]" link type="success" @click="advance(row)">{{ next[row.status]?.[1] }}</el-button></template></el-table-column></el-table><el-empty v-if="!loading&&!orders.length" description="暂无模拟订单"/><el-drawer v-model="detail" title="订单生产资料" size="520px"><template v-if="detail"><h3>{{ detail.order_no }}</h3><p>{{ detail.snapshot.bag.name }} · {{ price(detail.snapshot.bag.price_cents) }}</p><el-table :data="detail.snapshot.items"><el-table-column prop="name" label="图案"/><el-table-column label="固定尺寸"><template #default="{row}">{{ row.width_mm }} × {{ row.height_mm }} mm</template></el-table-column><el-table-column label="位置"><template #default="{row}">{{ row.center_x_ratio.toFixed(3) }}, {{ row.center_y_ratio.toFixed(3) }} / {{ row.rotation_degrees }}°</template></el-table-column></el-table></template></el-drawer></section></template>
+<style scoped>.toolbar{margin:20px 0}</style>
