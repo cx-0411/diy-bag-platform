@@ -91,6 +91,17 @@ def test_lists_saved_designs_for_its_client_only(client: TestClient) -> None:
     assert len(designs.json()) == 1
     assert designs.json()[0]['items'][0]['z_index'] == 3
 
+def test_cart_keeps_each_design_as_a_separate_item(client: TestClient) -> None:
+    asset, version = setup_catalog(client); bag = setup_bag(client, asset)
+    created = client.post('/api/designs', json={'bag_id': bag, 'client_key': 'cart-client', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5}]}).json()
+    first = client.post('/api/cart-items', json={'design_id': created['id'], 'client_key': 'cart-client'}).json()
+    second = client.post('/api/cart-items', json={'design_id': created['id'], 'client_key': 'cart-client'}).json()
+    listed = client.get('/api/cart-items?client_key=cart-client')
+    assert listed.status_code == 200 and len(listed.json()) == 2
+    assert first['id'] != second['id']
+    assert client.delete(f"/api/cart-items/{first['id']}?client_key=cart-client").status_code == 204
+    assert len(client.get('/api/cart-items?client_key=cart-client').json()) == 1
+
 def test_order_uses_immutable_snapshot_recalculated_price_and_mock_payment(client: TestClient) -> None:
     asset, version = setup_catalog(client); bag = setup_bag(client, asset)
     design = client.post('/api/designs', json={

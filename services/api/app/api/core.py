@@ -5,8 +5,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import AppSetting, Bag, Design, EmbroideryArea, FileAsset, Order, Pattern, PatternCategory, PatternVersion, DesignItem
-from app.schemas import AdminOrderOut, AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, CategoryUpdateIn, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, OrderStatusIn, PatternIn, PatternOut, PatternVersionOut
+from app.models import AppSetting, Bag, CartItem, Design, EmbroideryArea, FileAsset, Order, Pattern, PatternCategory, PatternVersion, DesignItem
+from app.schemas import AdminOrderOut, AreaIn, AreaOut, AssetOut, BagIn, BagOut, CartItemIn, CartItemOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, CategoryUpdateIn, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, OrderStatusIn, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
 from app.services.orders import create_order, mock_pay, update_production_status
 from app.services.rendering import render_design_preview, render_order_production
@@ -142,6 +142,21 @@ def delete_design(design_id: UUID, client_key: str, db: Session = Depends(get_db
     if not design: raise HTTPException(404, 'Design not found')
     db.query(DesignItem).filter(DesignItem.design_id == design.id).delete()
     db.delete(design); db.commit()
+@router.post('/cart-items', response_model=CartItemOut)
+def add_cart_item(data: CartItemIn, db: Session = Depends(get_db)):
+    design = db.scalar(select(Design).where(Design.id == data.design_id, Design.client_key == data.client_key))
+    if not design: raise HTTPException(404, 'Design not found')
+    item = CartItem(client_key=data.client_key, design_id=design.id); db.add(item); db.commit(); db.refresh(item)
+    return CartItemOut(id=item.id, design_id=item.design_id, created_at=item.created_at, total_price_cents=design.total_price_cents)
+@router.get('/cart-items', response_model=list[CartItemOut])
+def list_cart_items(client_key: str, db: Session = Depends(get_db)):
+    rows = db.execute(select(CartItem, Design).join(Design, Design.id == CartItem.design_id).where(CartItem.client_key == client_key).order_by(CartItem.created_at.desc())).all()
+    return [CartItemOut(id=item.id, design_id=design.id, created_at=item.created_at, total_price_cents=design.total_price_cents) for item, design in rows]
+@router.delete('/cart-items/{cart_item_id}', status_code=204)
+def delete_cart_item(cart_item_id: UUID, client_key: str, db: Session = Depends(get_db)):
+    item = db.scalar(select(CartItem).where(CartItem.id == cart_item_id, CartItem.client_key == client_key))
+    if not item: raise HTTPException(404, 'Cart item not found')
+    db.delete(item); db.commit()
 @router.post('/designs/{design_id}/preview', response_model=AssetOut)
 def render_preview(design_id: UUID, client_key: str, db: Session = Depends(get_db)):
     design = db.scalar(select(Design).where(Design.id == design_id, Design.client_key == client_key))

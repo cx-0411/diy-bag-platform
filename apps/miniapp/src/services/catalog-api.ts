@@ -21,5 +21,9 @@ export const catalogApi = {
   createOrder: (designId: string, clientKey: string) => request<ApiOrder>('/orders', 'POST', { design_id: designId, client_key: clientKey }),
   orders: (clientKey: string) => request<ApiOrder[]>(`/orders?client_key=${encodeURIComponent(clientKey)}`),
   mockPay: (orderId: string, clientKey: string) => request<ApiOrder>(`/orders/${orderId}/mock-pay?client_key=${encodeURIComponent(clientKey)}`, 'POST'),
+  addCartItem: (designId: string, clientKey: string) => request<ApiCartItem>('/cart-items', 'POST', { design_id: designId, client_key: clientKey }),
+  cartItems: (clientKey: string) => request<ApiCartItem[]>(`/cart-items?client_key=${encodeURIComponent(clientKey)}`),
+  deleteCartItem: (id: string, clientKey: string) => request<void>(`/cart-items/${id}?client_key=${encodeURIComponent(clientKey)}`, 'DELETE'),
 }
 export interface ApiOrder { id: string; order_no: string; design_id: string; status: string; total_price_cents: number; created_at: string; paid_at: string | null }
+export interface ApiCartItem { id: string; design_id: string; created_at: string; total_price_cents: number }

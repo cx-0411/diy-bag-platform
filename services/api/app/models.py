@@ -87,6 +87,10 @@ class DesignAsset(Timestamped):
     design_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('designs.id'), unique=True)
     preview_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey('file_assets.id'), nullable=True)
     production_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey('file_assets.id'), nullable=True)
+class CartItem(Timestamped):
+    __tablename__ = 'cart_items'
+    client_key: Mapped[str] = mapped_column(String(64), index=True)
+    design_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('designs.id'))
 class Order(Timestamped):
     __tablename__ = 'orders'
     order_no: Mapped[str] = mapped_column(String(40), unique=True, index=True)
