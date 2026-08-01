@@ -50,6 +50,9 @@ class PatternCategory(SoftDeleted):
     __tablename__ = 'pattern_categories'
     name: Mapped[str] = mapped_column(String(100), unique=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    icon: Mapped[str] = mapped_column(String(32), default='✨')
+    description: Mapped[str] = mapped_column(String(200), default='')
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 class Pattern(SoftDeleted):
     __tablename__ = 'patterns'
     category_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('pattern_categories.id'))

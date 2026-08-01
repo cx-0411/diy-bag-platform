@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import AppSetting, Bag, Design, EmbroideryArea, FileAsset, Order, Pattern, PatternCategory, PatternVersion, DesignItem
-from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, PatternIn, PatternOut, PatternVersionOut
+from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, CategoryUpdateIn, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
 from app.services.orders import create_order, mock_pay
 from app.services.rendering import render_design_preview, render_order_production
@@ -93,7 +93,20 @@ def create_category(data: CategoryIn, db: Session = Depends(get_db)):
 def list_categories(db: Session = Depends(get_db)): return db.scalars(active(select(PatternCategory), PatternCategory)).all()
 @router.get('/catalog/pattern-categories', response_model=list[CategoryOut])
 def list_catalog_categories(db: Session = Depends(get_db)):
-    return db.scalars(active(select(PatternCategory), PatternCategory).order_by(PatternCategory.sort_order, PatternCategory.name)).all()
+    return db.scalars(active(select(PatternCategory).where(PatternCategory.is_active.is_(True)), PatternCategory).order_by(PatternCategory.sort_order, PatternCategory.name)).all()
+@router.put('/pattern-categories/{category_id}', response_model=CategoryOut)
+def update_category(category_id: UUID, data: CategoryUpdateIn, db: Session = Depends(get_db)):
+    category = db.scalar(active(select(PatternCategory).where(PatternCategory.id == category_id), PatternCategory))
+    if not category: raise HTTPException(404, 'Pattern category not found')
+    for key, value in data.model_dump().items(): setattr(category, key, value)
+    db.commit(); db.refresh(category); return category
+@router.post('/pattern-categories/{category_id}/archive', response_model=CategoryOut)
+def archive_category(category_id: UUID, db: Session = Depends(get_db)):
+    category = db.scalar(active(select(PatternCategory).where(PatternCategory.id == category_id), PatternCategory))
+    if not category: raise HTTPException(404, 'Pattern category not found')
+    from datetime import datetime, timezone
+    category.is_active = False; category.deleted_at = datetime.now(timezone.utc)
+    db.commit(); db.refresh(category); return category
 @router.post('/patterns', response_model=PatternOut)
 def create_pattern(data: PatternIn, db: Session = Depends(get_db)):
     if not db.get(PatternCategory, data.category_id) or not db.get(FileAsset, data.image_asset_id): raise HTTPException(422, 'Category or image does not exist')
