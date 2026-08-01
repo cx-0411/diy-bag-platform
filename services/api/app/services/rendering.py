@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from math import floor
+from uuid import UUID
 
 from fastapi import HTTPException
 from PIL import Image, ImageDraw
@@ -38,6 +39,10 @@ def _encode(image: Image.Image) -> bytes:
 
 def render_design_preview(session: Session, design: Design) -> FileAsset:
     """Render a non-production design preview using persisted physical measurements."""
+    if design.preview_asset_id:
+        existing = session.get(FileAsset, design.preview_asset_id)
+        if existing:
+            return existing
     bag = session.get(Bag, design.bag_id)
     area = session.scalar(select(EmbroideryArea).where(EmbroideryArea.bag_id == design.bag_id))
     if not bag or not area:
@@ -67,7 +72,7 @@ def render_design_preview(session: Session, design: Design) -> FileAsset:
         canvas.alpha_composite(sticker, (floor(center_x - sticker.width / 2), floor(center_y - sticker.height / 2)))
     overlay = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
-    draw.text((16, max(16, height - 30)), 'DIY PREVIEW', fill=(255, 255, 255, 140), stroke_width=1, stroke_fill=(60, 45, 35, 140))
+    draw.text((16, max(16, height - 30)), 'DIY PREVIEW - WATERMARK', fill=(255, 255, 255, 140), stroke_width=1, stroke_fill=(60, 45, 35, 140))
     canvas = Image.alpha_composite(canvas, overlay)
     key, size = storage.save_bytes(_encode(canvas))
     asset = FileAsset(original_name=f'design-preview-{design.id}.png', storage_key=key, content_type='image/png', size_bytes=size, visibility='public')
@@ -83,11 +88,9 @@ def render_design_preview(session: Session, design: Design) -> FileAsset:
 
 def render_order_production(session: Session, order: Order) -> FileAsset:
     """Render from the order snapshot, so later catalog edits cannot change production artwork."""
-    if order.status != 'PAID':
-        raise HTTPException(409, 'Production artwork is available after payment')
     existing_id = order.snapshot.get('production_asset_id')
     if existing_id:
-        existing = session.get(FileAsset, existing_id)
+        existing = session.get(FileAsset, UUID(str(existing_id)))
         if existing:
             return existing
     storage = StorageService()

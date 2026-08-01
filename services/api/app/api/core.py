@@ -169,7 +169,11 @@ def render_preview(design_id: UUID, client_key: str, db: Session = Depends(get_d
     return AssetOut(id=asset.id, original_name=asset.original_name, content_type=asset.content_type, size_bytes=asset.size_bytes, url=StorageService().url(asset.storage_key))
 @router.post('/orders', response_model=OrderOut)
 def create_mock_order(data: OrderCreateIn, db: Session = Depends(get_db)):
-    order = create_order(db, data.design_id, data.client_key); db.commit(); db.refresh(order); return order
+    order = create_order(db, data.design_id, data.client_key)
+    # Persist a private, watermark-free production image with the immutable order snapshot.
+    # The merchant can therefore receive the production material as soon as an order exists.
+    render_order_production(db, order)
+    db.commit(); db.refresh(order); return order
 @router.post('/orders/{order_id}/mock-pay', response_model=OrderOut)
 def pay_mock_order(order_id: UUID, client_key: str, db: Session = Depends(get_db)):
     order = mock_pay(db, order_id, client_key); db.commit(); db.refresh(order); return order

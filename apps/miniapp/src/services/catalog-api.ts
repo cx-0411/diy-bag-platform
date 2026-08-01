@@ -5,6 +5,7 @@ export interface ApiBag { id: string; name: string; image_url: string; width_mm:
 export interface ApiCategory { id: string; name: string; sort_order: number; icon: string; description: string }
 export interface ApiPattern { id: string; category_id: string; name: string; image_url: string; width_mm: number; height_mm: number; price_cents: number; pattern_version_id: string }
 export interface ApiDesign { id: string; bag_id: string; total_price_cents: number; items: Array<{ id: string; pattern_version_id: string; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number; z_index: number }> }
+export interface ApiAsset { id: string; original_name: string; content_type: string; size_bytes: number; url: string }
 
 type RequestMethod = 'GET' | 'POST' | 'DELETE'
 function request<T>(path: string, method: RequestMethod = 'GET', data?: object): Promise<T> {
@@ -18,6 +19,7 @@ export const catalogApi = {
   saveDesign: (data: { bag_id: string; client_key: string; items: Array<{ pattern_version_id: string; center_x_ratio: number; center_y_ratio: number; rotation_degrees: number; z_index: number }> }) => request<ApiDesign>('/designs', 'POST', data),
   designs: (clientKey: string) => request<ApiDesign[]>(`/designs?client_key=${encodeURIComponent(clientKey)}`),
   deleteDesign: (id: string, clientKey: string) => request<void>(`/designs/${id}?client_key=${encodeURIComponent(clientKey)}`, 'DELETE'),
+  previewDesign: (id: string, clientKey: string) => request<ApiAsset>(`/designs/${id}/preview?client_key=${encodeURIComponent(clientKey)}`, 'POST'),
   createOrder: (designId: string, clientKey: string) => request<ApiOrder>('/orders', 'POST', { design_id: designId, client_key: clientKey }),
   orders: (clientKey: string) => request<ApiOrder[]>(`/orders?client_key=${encodeURIComponent(clientKey)}`),
   mockPay: (orderId: string, clientKey: string) => request<ApiOrder>(`/orders/${orderId}/mock-pay?client_key=${encodeURIComponent(clientKey)}`, 'POST'),

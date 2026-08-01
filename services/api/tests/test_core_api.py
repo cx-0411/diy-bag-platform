@@ -104,7 +104,7 @@ def test_cart_keeps_each_design_as_a_separate_item(client: TestClient) -> None:
     assert client.delete(f"/api/designs/{created['id']}?client_key=cart-client").status_code == 409
 
 def test_order_uses_immutable_snapshot_recalculated_price_and_mock_payment(client: TestClient) -> None:
-    asset, version = setup_catalog(client); bag = setup_bag(client, asset)
+    asset, version = setup_catalog(client, image_asset_id(client)); bag = setup_bag(client, asset)
     design = client.post('/api/designs', json={
         'bag_id': bag, 'client_key': 'test-client-key',
         'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5, 'rotation_degrees': 15, 'z_index': 2}],
@@ -132,17 +132,18 @@ def test_order_uses_immutable_snapshot_recalculated_price_and_mock_payment(clien
     assert shipped.json()['tracking_no'] == 'SF123'
     assert client.post(f"/api/admin/orders/{order['id']}/status", json={'status': 'COMPLETED'}).json()['status'] == 'COMPLETED'
 
-def test_preview_and_paid_production_image_are_rendered_with_correct_visibility(client: TestClient) -> None:
+def test_preview_and_order_production_image_are_rendered_with_correct_visibility(client: TestClient) -> None:
     asset, version = setup_catalog(client, image_asset_id(client)); bag = setup_bag(client, asset)
     design = client.post('/api/designs', json={'bag_id': bag, 'client_key': 'render-client', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5}]}).json()
     preview = client.post(f"/api/designs/{design['id']}/preview?client_key=render-client")
     assert preview.status_code == 200
-    assert client.get(preview.json()['url']).status_code == 200
+    preview_bytes = client.get(preview.json()['url']).content
+    assert preview_bytes
     order = client.post('/api/orders', json={'design_id': design['id'], 'client_key': 'render-client'}).json()
-    assert client.get(f"/api/admin/orders/{order['id']}/production-image").status_code == 409
-    assert client.post(f"/api/orders/{order['id']}/mock-pay?client_key=render-client").status_code == 200
     production = client.get(f"/api/admin/orders/{order['id']}/production-image")
     assert production.status_code == 200
+    # The user preview is separately rendered with a watermark; production output is not reused from it.
+    assert production.content != preview_bytes
     with client.app.state.test_session_factory() as session:
         from app.models import Order
         production_asset_id = session.get(Order, UUID(order['id'])).snapshot['production_asset_id']
