@@ -103,7 +103,7 @@ export const useEditorStore = defineStore('editor', () => {
     const items = placements.value.map((item) => { const pattern = getPattern(item.patternId); if (!pattern.patternVersionId) throw new Error('当前图案不是正式版本，无法保存'); return { pattern_version_id: pattern.patternVersionId, center_x_ratio: item.centerXRatio, center_y_ratio: item.centerYRatio, rotation_degrees: item.rotationDegrees, z_index: item.zIndex } })
     const design = await catalogApi.saveDesign({ bag_id: bag.value.id, client_key: clientKey(), items })
     savedDesign.value = { id: design.id, totalPriceCents: design.total_price_cents }
-    savedDesigns.value.unshift({ ...savedDesign.value, bagId: bag.value.id, placements: JSON.parse(JSON.stringify(placements.value)) })
+    savedDesigns.value.push({ ...savedDesign.value, bagId: bag.value.id, placements: JSON.parse(JSON.stringify(placements.value)) })
   }
   async function restoreDesign(design: StoredDesign): Promise<void> { await loadCatalog(design.bagId); placements.value = JSON.parse(JSON.stringify(design.placements)); selectedPlacementId.value = null; savedDesign.value = { id: design.id, totalPriceCents: design.totalPriceCents } }
   async function removeSavedDesign(design: StoredDesign): Promise<void> { await catalogApi.deleteDesign(design.id, clientKey()); savedDesigns.value = savedDesigns.value.filter((item) => item.id !== design.id); if (savedDesign.value?.id === design.id) savedDesign.value = null }

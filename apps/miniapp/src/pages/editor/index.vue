@@ -178,7 +178,7 @@ watch(canvasZoom, measure)
       <view class="selection-tip" v-if="selectedPattern">已选「{{ selectedPattern.name }}」：单指拖动，拖动蓝色手柄旋转；图案尺寸固定。</view>
       <view class="action-dock"><view class="price-row"><view><text>包包 {{ price(editor.bag.basePriceCents) }}</text><text>图案 {{ price(editor.patternPriceCents) }}</text></view><view class="total"><text>合计</text><text>{{ price(editor.totalPriceCents) }}</text></view></view><view class="bottom-actions"><button @tap="editor.clearDraft">清空</button><button class="primary" :loading="saving" @tap="save">保存设计</button></view></view>
 
-      <view v-if="editor.savedDesigns.length" class="draft-list"><text class="draft-title">已保存设计 {{ editor.savedDesigns.length }}/{{ editor.maxDrafts }}</text><view v-for="design in editor.savedDesigns" :key="design.id" class="draft-row"><text>设计 {{ design.id.slice(0, 6) }} · {{ price(design.totalPriceCents) }}</text><view><button @tap.stop="restore(design)">恢复</button><button class="danger" @tap.stop="remove(design)">删除</button></view></view></view>
+      <view v-if="editor.savedDesigns.length" class="draft-list"><text class="draft-title">已保存设计 {{ editor.savedDesigns.length }}/{{ editor.maxDrafts }}</text><view v-for="(design, index) in editor.savedDesigns" :key="design.id" class="draft-row"><text>设计 {{ index + 1 }} · {{ price(design.totalPriceCents) }}</text><view><button @tap.stop="restore(design)">恢复</button><button class="danger" @tap.stop="remove(design)">删除</button></view></view></view>
     </template>
   </view>
 </template>
