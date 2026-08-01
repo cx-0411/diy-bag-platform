@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { canPlacePattern, clampPlacement } from '../domain/geometry'
+import { canPlacePattern, snapPlacement } from '../domain/geometry'
 import type { BagDefinition, PatternCategory, PatternDefinition, PatternPlacement } from '../domain/types'
 import { catalogApi, type ApiBag, type ApiDesign } from '../../../services/catalog-api'
 
@@ -42,6 +42,8 @@ export const useEditorStore = defineStore('editor', () => {
   const savedDesign = ref<{ id: string; totalPriceCents: number } | null>(null)
   const savedDesigns = ref<StoredDesign[]>(readSavedDesigns())
   const maxDrafts = ref(3)
+  const history = ref<PatternPlacement[][]>([])
+  const future = ref<PatternPlacement[][]>([])
 
   const selectedPlacement = computed(() => placements.value.find((item) => item.id === selectedPlacementId.value) ?? null)
   const activePatterns = computed(() => catalog.value.filter((item) => item.categoryId === activeCategoryId.value))
@@ -57,17 +59,21 @@ export const useEditorStore = defineStore('editor', () => {
     const pattern = getPattern(patternId)
     if (!canPlacePattern(pattern, bag.value.embroideryArea)) return
     const item: PatternPlacement = { id: placementId(), patternId, centerXRatio: .5, centerYRatio: .5, rotationDegrees: 0, zIndex: Math.max(-1, ...placements.value.map((value) => value.zIndex)) + 1 }
-    placements.value.push(clampPlacement(item, pattern, bag.value.embroideryArea)); selectedPlacementId.value = item.id
+    checkpoint(); placements.value.push(snapPlacement(item, pattern, bag.value.embroideryArea)); selectedPlacementId.value = item.id
   }
   function updatePlacement(next: PatternPlacement): void {
     const pattern = getPattern(next.patternId)
-    placements.value = placements.value.map((item) => item.id === next.id ? clampPlacement(next, pattern, bag.value.embroideryArea) : item)
+    placements.value = placements.value.map((item) => item.id === next.id ? snapPlacement(next, pattern, bag.value.embroideryArea) : item)
   }
   function selectPlacement(id: string | null): void { selectedPlacementId.value = id }
-  function deleteSelected(): void { placements.value = placements.value.filter((item) => item.id !== selectedPlacementId.value); selectedPlacementId.value = null }
-  function replaceSelected(patternId: string): void { if (!selectedPlacement.value) addPattern(patternId); else updatePlacement({ ...selectedPlacement.value, patternId }) }
-  function rotateSelected(deltaDegrees: number): void { if (selectedPlacement.value) updatePlacement({ ...selectedPlacement.value, rotationDegrees: selectedPlacement.value.rotationDegrees + deltaDegrees }) }
-  function clearDraft(): void { placements.value = []; selectedPlacementId.value = null; uni.removeStorageSync(DRAFT_KEY) }
+  function checkpoint(): void { history.value.push(JSON.parse(JSON.stringify(placements.value))); if (history.value.length > 30) history.value.shift(); future.value = [] }
+  function beginGesture(): void { checkpoint() }
+  function deleteSelected(): void { if (!selectedPlacement.value) return; checkpoint(); placements.value = placements.value.filter((item) => item.id !== selectedPlacementId.value); selectedPlacementId.value = null }
+  function replaceSelected(patternId: string): void { if (!selectedPlacement.value) addPattern(patternId); else { checkpoint(); updatePlacement({ ...selectedPlacement.value, patternId }) } }
+  function rotateSelected(deltaDegrees: number): void { if (selectedPlacement.value) { checkpoint(); updatePlacement({ ...selectedPlacement.value, rotationDegrees: selectedPlacement.value.rotationDegrees + deltaDegrees }) } }
+  function clearDraft(): void { if (placements.value.length) checkpoint(); placements.value = []; selectedPlacementId.value = null; uni.removeStorageSync(DRAFT_KEY) }
+  function undo(): void { const previous = history.value.pop(); if (!previous) return; future.value.push(JSON.parse(JSON.stringify(placements.value))); placements.value = previous; selectedPlacementId.value = null }
+  function redo(): void { const next = future.value.pop(); if (!next) return; history.value.push(JSON.parse(JSON.stringify(placements.value))); placements.value = next; selectedPlacementId.value = null }
   function toBag(item: ApiBag): BagDefinition {
     return { id: item.id, name: item.name, imageUrl: `http://localhost:8000${item.image_url}`, width: item.width_mm, height: item.height_mm, basePriceCents: item.base_price_cents, embroideryArea: { width: item.embroidery_area.width_mm, height: item.embroidery_area.height_mm, relativeX: item.embroidery_area.relative_x, relativeY: item.embroidery_area.relative_y, relativeWidth: item.embroidery_area.relative_width, relativeHeight: item.embroidery_area.relative_height } }
   }
@@ -103,5 +109,5 @@ export const useEditorStore = defineStore('editor', () => {
 
   watch(placements, (value) => uni.setStorageSync(DRAFT_KEY, value), { deep: true })
   watch(savedDesigns, (value) => uni.setStorageSync(SAVED_DRAFTS_KEY, value), { deep: true })
-  return { bag, availableBags, categories, activeCategoryId, activePatterns, placements, selectedPlacementId, selectedPlacement, patternPriceCents, totalPriceCents, catalogError, loadingCatalog, catalogLoaded, savedDesign, savedDesigns, maxDrafts, getPattern, addPattern, updatePlacement, selectPlacement, deleteSelected, replaceSelected, rotateSelected, clearDraft, loadCatalog, loadSavedDesigns, saveDesign, restoreDesign, removeSavedDesign, clientKey }
+  return { bag, availableBags, categories, activeCategoryId, activePatterns, placements, selectedPlacementId, selectedPlacement, patternPriceCents, totalPriceCents, catalogError, loadingCatalog, catalogLoaded, savedDesign, savedDesigns, maxDrafts, getPattern, addPattern, updatePlacement, beginGesture, selectPlacement, deleteSelected, replaceSelected, rotateSelected, clearDraft, undo, redo, loadCatalog, loadSavedDesigns, saveDesign, restoreDesign, removeSavedDesign, clientKey }
 })

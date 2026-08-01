@@ -21,6 +21,16 @@ export function clampPlacement(placement: PatternPlacement, pattern: PatternDefi
   return { ...placement, rotationDegrees: ((placement.rotationDegrees ?? 0) % 360 + 360) % 360, centerXRatio: clamp(placement.centerXRatio, minX, 1 - minX), centerYRatio: clamp(placement.centerYRatio, minY, 1 - minY) }
 }
 
+/** Snap a placement to the embroidery area's center or legal edges, then keep it inside. */
+export function snapPlacement(placement: PatternPlacement, pattern: PatternDefinition, area: EmbroideryArea, threshold = .025): PatternPlacement {
+  const clamped = clampPlacement(placement, pattern, area)
+  const angle = ((clamped.rotationDegrees ?? 0) * Math.PI) / 180
+  const rotatedWidth = Math.abs(pattern.width * Math.cos(angle)) + Math.abs(pattern.height * Math.sin(angle))
+  const rotatedHeight = Math.abs(pattern.width * Math.sin(angle)) + Math.abs(pattern.height * Math.cos(angle))
+  const minX = rotatedWidth / area.width / 2; const minY = rotatedHeight / area.height / 2
+  return { ...clamped, centerXRatio: snap(clamped.centerXRatio, [minX, .5, 1 - minX], threshold), centerYRatio: snap(clamped.centerYRatio, [minY, .5, 1 - minY], threshold) }
+}
+
 export function placementPixelPoint(placement: PatternPlacement, pattern: PatternDefinition, area: EmbroideryArea, areaPixels: PixelSize): PixelPoint {
   const size = patternPixelSize(pattern, area, areaPixels)
   return { x: placement.centerXRatio * areaPixels.width - size.width / 2, y: placement.centerYRatio * areaPixels.height - size.height / 2 }
@@ -32,3 +42,4 @@ export function pixelPointToPlacement(pixelTopLeft: PixelPoint, placement: Patte
 }
 
 function clamp(value: number, min: number, max: number): number { return Math.min(Math.max(value, min), max) }
+function snap(value: number, targets: number[], threshold: number): number { const target = targets.find((item) => Math.abs(value - item) <= threshold); return target ?? value }

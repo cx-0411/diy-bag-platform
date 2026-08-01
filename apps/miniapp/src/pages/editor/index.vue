@@ -28,13 +28,13 @@ function placementStyle(placement: PatternPlacement): Record<string, string> {
 function choose(patternId: string): void { editor.addPattern(patternId); panelOpen.value = false }
 function start(placement: PatternPlacement, event: TouchLikeEvent): void {
   if (!zoneRect.value || !event.touches[0]) return
-  editor.selectPlacement(placement.id)
+  editor.selectPlacement(placement.id); editor.beginGesture()
   const point = placementPixelPoint(placement, editor.getPattern(placement.patternId), editor.bag.embroideryArea, zoneRect.value)
   dragging.value = { id: placement.id, offsetX: event.touches[0].clientX - zoneRect.value.left - point.x, offsetY: event.touches[0].clientY - zoneRect.value.top - point.y }
 }
 function startMouse(placement: PatternPlacement, event: MouseEvent): void {
   if (!zoneRect.value) return
-  editor.selectPlacement(placement.id)
+  editor.selectPlacement(placement.id); editor.beginGesture()
   const point = placementPixelPoint(placement, editor.getPattern(placement.patternId), editor.bag.embroideryArea, zoneRect.value)
   dragging.value = { id: placement.id, offsetX: event.clientX - zoneRect.value.left - point.x, offsetY: event.clientY - zoneRect.value.top - point.y }
 }
@@ -63,7 +63,7 @@ function moveMouse(event: MouseEvent): void {
 }
 function beginRotate(placement: PatternPlacement, x: number, y: number): void {
   if (!zoneRect.value) return
-  editor.selectPlacement(placement.id)
+  editor.selectPlacement(placement.id); editor.beginGesture()
   const centerX = zoneRect.value.left + placement.centerXRatio * zoneRect.value.width
   const centerY = zoneRect.value.top + placement.centerYRatio * zoneRect.value.height
   rotating.value = { id: placement.id, pointerAngle: Math.atan2(y - centerY, x - centerX) * 180 / Math.PI, rotation: placement.rotationDegrees }
@@ -108,7 +108,7 @@ watch(() => editor.catalogLoaded, (ready) => { if (ready) measure() })
               </view>
             </view>
           </view>
-          <view class="canvas-tools"><button @tap="canvasZoom = Math.max(.8, canvasZoom - .1)">−</button><button @tap="canvasZoom = Math.min(1.2, canvasZoom + .1)">+</button><button @tap="editor.rotateSelected(-15)">↺</button><button @tap="editor.rotateSelected(15)">↻</button><button class="danger" @tap="editor.deleteSelected">删除</button></view>
+          <view class="canvas-tools"><button @tap="canvasZoom = Math.max(.8, canvasZoom - .1)">−</button><button @tap="canvasZoom = Math.min(1.2, canvasZoom + .1)">+</button><button @tap="editor.undo">撤销</button><button @tap="editor.redo">重做</button><button @tap="editor.rotateSelected(-15)">↺</button><button @tap="editor.rotateSelected(15)">↻</button><button class="danger" @tap="editor.deleteSelected">删除</button></view>
         </view>
       </view>
       <view v-if="panelOpen" class="catalog-mask" @tap="panelOpen = false"><view class="catalog-panel" @tap.stop><view class="panel-head"><text>{{ editor.categories.find((item) => item.id === editor.activeCategoryId)?.name }}</text><text @tap="panelOpen = false">关闭</text></view><view class="catalog"><view v-for="pattern in editor.activePatterns" :key="pattern.id" class="pattern-card" @tap="choose(pattern.id)"><image :src="pattern.imageUrl" mode="aspectFit"/><text>{{ pattern.name }}</text><text>{{ pattern.width }}×{{ pattern.height }}mm</text><text>{{ price(pattern.priceCents) }}</text></view><view v-if="!editor.activePatterns.length" class="empty">该分类暂未上架图案</view></view></view></view>
