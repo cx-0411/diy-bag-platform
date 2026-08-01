@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Uuid, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, Numeric, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 
@@ -78,3 +78,29 @@ class DesignItem(Timestamped):
     center_y_ratio: Mapped[float] = mapped_column(Numeric(9, 6))
     rotation_degrees: Mapped[int] = mapped_column(Integer, default=0)
     z_index: Mapped[int] = mapped_column(Integer, default=0)
+class DesignAsset(Timestamped):
+    __tablename__ = 'design_assets'
+    design_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('designs.id'))
+    preview_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey('file_assets.id'), nullable=True)
+    production_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey('file_assets.id'), nullable=True)
+class Order(Timestamped):
+    __tablename__ = 'orders'
+    order_no: Mapped[str] = mapped_column(String(40), unique=True, index=True)
+    client_key: Mapped[str] = mapped_column(String(64), index=True)
+    design_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('designs.id'))
+    status: Mapped[str] = mapped_column(String(30), default='PENDING_PAYMENT')
+    total_price_cents: Mapped[int] = mapped_column(Integer)
+    snapshot: Mapped[dict] = mapped_column(JSON)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+class OrderItem(Timestamped):
+    __tablename__ = 'order_items'
+    order_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('orders.id'))
+    pattern_version_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey('pattern_versions.id'))
+    name_snapshot: Mapped[str] = mapped_column(String(200))
+    width_mm_snapshot: Mapped[int] = mapped_column(Integer)
+    height_mm_snapshot: Mapped[int] = mapped_column(Integer)
+    price_cents_snapshot: Mapped[int] = mapped_column(Integer)
+    center_x_ratio: Mapped[float] = mapped_column(Numeric(9, 6))
+    center_y_ratio: Mapped[float] = mapped_column(Numeric(9, 6))
+    rotation_degrees: Mapped[int] = mapped_column(Integer)
+    z_index: Mapped[int] = mapped_column(Integer)

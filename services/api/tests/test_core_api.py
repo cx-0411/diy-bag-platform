@@ -69,3 +69,26 @@ def test_delete_design_for_own_client(client: TestClient) -> None:
     created = client.post('/api/designs', json={'bag_id': bag, 'client_key': 'test-client-key', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5}]}).json()
     deleted = client.delete(f"/api/designs/{created['id']}?client_key=test-client-key")
     assert deleted.status_code == 204
+
+def test_order_uses_immutable_snapshot_recalculated_price_and_mock_payment(client: TestClient) -> None:
+    asset, version = setup_catalog(client); bag = setup_bag(client, asset)
+    design = client.post('/api/designs', json={
+        'bag_id': bag, 'client_key': 'test-client-key',
+        'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5, 'rotation_degrees': 15, 'z_index': 2}],
+    }).json()
+    order_response = client.post('/api/orders', json={'design_id': design['id'], 'client_key': 'test-client-key'})
+    assert order_response.status_code == 200
+    order = order_response.json()
+    assert order['status'] == 'PENDING_PAYMENT'
+    assert order['total_price_cents'] == 17100
+    with client.app.state.test_session_factory() as session:
+        from app.models import Bag, Order
+        saved_order = session.get(Order, UUID(order['id']))
+        assert saved_order.snapshot['bag']['price_cents'] == 15900
+        session.get(Bag, UUID(bag)).base_price_cents = 99999
+        session.commit()
+        assert saved_order.snapshot['items'][0]['rotation_degrees'] == 15
+    paid = client.post(f"/api/orders/{order['id']}/mock-pay?client_key=test-client-key")
+    assert paid.status_code == 200
+    assert paid.json()['status'] == 'PAID'
+    assert client.post(f"/api/orders/{order['id']}/mock-pay?client_key=test-client-key").status_code == 409

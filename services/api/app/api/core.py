@@ -5,9 +5,10 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import AppSetting, Bag, Design, EmbroideryArea, FileAsset, Pattern, PatternCategory, PatternVersion, DesignItem
-from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, PatternIn, PatternOut, PatternVersionOut
+from app.models import AppSetting, Bag, Design, EmbroideryArea, FileAsset, Order, Pattern, PatternCategory, PatternVersion, DesignItem
+from app.schemas import AreaIn, AreaOut, AssetOut, BagIn, BagOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
+from app.services.orders import create_order, mock_pay
 from app.services.storage import StorageService
 router = APIRouter()
 def active(statement, model): return statement.where(model.deleted_at.is_(None))
@@ -121,3 +122,12 @@ def delete_design(design_id: UUID, client_key: str, db: Session = Depends(get_db
     if not design: raise HTTPException(404, 'Design not found')
     db.query(DesignItem).filter(DesignItem.design_id == design.id).delete()
     db.delete(design); db.commit()
+@router.post('/orders', response_model=OrderOut)
+def create_mock_order(data: OrderCreateIn, db: Session = Depends(get_db)):
+    order = create_order(db, data.design_id, data.client_key); db.commit(); db.refresh(order); return order
+@router.post('/orders/{order_id}/mock-pay', response_model=OrderOut)
+def pay_mock_order(order_id: UUID, client_key: str, db: Session = Depends(get_db)):
+    order = mock_pay(db, order_id, client_key); db.commit(); db.refresh(order); return order
+@router.get('/admin/orders', response_model=list[OrderOut])
+def list_orders(db: Session = Depends(get_db)):
+    return db.scalars(select(Order).order_by(Order.created_at.desc())).all()

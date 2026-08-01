@@ -22,3 +22,5 @@ class DesignItemOut(DesignItemIn): id: UUID
 class DesignOut(APIModel): id: UUID; bag_id: UUID; total_price_cents: int; items: list[DesignItemOut]
 class DesignLimitIn(APIModel): max_drafts: int = Field(ge=1, le=20)
 class DesignLimitOut(DesignLimitIn): pass
+class OrderCreateIn(APIModel): design_id: UUID; client_key: str = Field(min_length=8, max_length=64)
+class OrderOut(APIModel): id: UUID; order_no: str; design_id: UUID; status: str; total_price_cents: int; created_at: object; paid_at: object | None = None
