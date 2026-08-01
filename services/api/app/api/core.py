@@ -154,6 +154,9 @@ def create_mock_order(data: OrderCreateIn, db: Session = Depends(get_db)):
 @router.post('/orders/{order_id}/mock-pay', response_model=OrderOut)
 def pay_mock_order(order_id: UUID, client_key: str, db: Session = Depends(get_db)):
     order = mock_pay(db, order_id, client_key); db.commit(); db.refresh(order); return order
+@router.get('/orders', response_model=list[OrderOut])
+def list_customer_orders(client_key: str, db: Session = Depends(get_db)):
+    return db.scalars(select(Order).where(Order.client_key == client_key).order_by(Order.created_at.desc())).all()
 @router.get('/admin/orders', response_model=list[AdminOrderOut])
 def list_orders(db: Session = Depends(get_db)):
     return db.scalars(select(Order).order_by(Order.created_at.desc())).all()

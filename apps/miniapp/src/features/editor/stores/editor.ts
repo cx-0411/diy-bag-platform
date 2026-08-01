@@ -103,5 +103,5 @@ export const useEditorStore = defineStore('editor', () => {
 
   watch(placements, (value) => uni.setStorageSync(DRAFT_KEY, value), { deep: true })
   watch(savedDesigns, (value) => uni.setStorageSync(SAVED_DRAFTS_KEY, value), { deep: true })
-  return { bag, availableBags, categories, activeCategoryId, activePatterns, placements, selectedPlacementId, selectedPlacement, patternPriceCents, totalPriceCents, catalogError, loadingCatalog, catalogLoaded, savedDesign, savedDesigns, maxDrafts, getPattern, addPattern, updatePlacement, selectPlacement, deleteSelected, replaceSelected, rotateSelected, clearDraft, loadCatalog, loadSavedDesigns, saveDesign, restoreDesign, removeSavedDesign }
+  return { bag, availableBags, categories, activeCategoryId, activePatterns, placements, selectedPlacementId, selectedPlacement, patternPriceCents, totalPriceCents, catalogError, loadingCatalog, catalogLoaded, savedDesign, savedDesigns, maxDrafts, getPattern, addPattern, updatePlacement, selectPlacement, deleteSelected, replaceSelected, rotateSelected, clearDraft, loadCatalog, loadSavedDesigns, saveDesign, restoreDesign, removeSavedDesign, clientKey }
 })
