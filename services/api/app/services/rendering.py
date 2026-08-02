@@ -41,25 +41,28 @@ def _preview_watermark(canvas: Image.Image) -> Image.Image:
     """Make preview-only artwork unmistakable without changing production files."""
     width, height = canvas.size
     overlay = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
     try:
-        title_font = ImageFont.truetype('DejaVuSans-Bold.ttf', max(26, min(width, height) // 8))
-        subtitle_font = ImageFont.truetype('DejaVuSans-Bold.ttf', max(14, min(width, height) // 20))
+        font = ImageFont.truetype('/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc', max(24, min(width, height) // 19))
+        text = '设计已完成，付款后不支持退款'
     except OSError:
-        title_font = subtitle_font = ImageFont.load_default()
+        # Local unit-test machines may not have a CJK font. Production Docker
+        # images install Noto CJK and therefore use the Chinese customer copy.
+        font = ImageFont.load_default()
+        text = 'DESIGN COMPLETE - NO REFUNDS'
 
-    title = 'DIY PREVIEW'
-    subtitle = 'WATERMARK · NOT FOR PRODUCTION'
-    title_box = draw.textbbox((0, 0), title, font=title_font)
-    subtitle_box = draw.textbbox((0, 0), subtitle, font=subtitle_font)
-    padding = max(16, min(width, height) // 18)
-    band_height = (title_box[3] - title_box[1]) + (subtitle_box[3] - subtitle_box[1]) + padding * 2
-    band_top = max(0, (height - band_height) // 2)
-    draw.rectangle((0, band_top, width, band_top + band_height), fill=(96, 54, 39, 170))
-    title_x = (width - (title_box[2] - title_box[0])) // 2
-    subtitle_x = (width - (subtitle_box[2] - subtitle_box[0])) // 2
-    draw.text((title_x, band_top + padding - title_box[1]), title, font=title_font, fill=(255, 255, 255, 245), stroke_width=1, stroke_fill=(81, 42, 30, 245))
-    draw.text((subtitle_x, band_top + padding + (title_box[3] - title_box[1]) - subtitle_box[1]), subtitle, font=subtitle_font, fill=(255, 238, 226, 245))
+    text_box = ImageDraw.Draw(Image.new('RGBA', (1, 1))).textbbox((0, 0), text, font=font)
+    text_width = text_box[2] - text_box[0]
+    text_height = text_box[3] - text_box[1]
+    tile = Image.new('RGBA', (text_width + 64, text_height + 46), (0, 0, 0, 0))
+    tile_draw = ImageDraw.Draw(tile)
+    tile_draw.text((32 - text_box[0], 20 - text_box[1]), text, font=font, fill=(255, 255, 255, 126))
+    tilted_tile = tile.rotate(28, expand=True, resample=Image.Resampling.BICUBIC)
+    row_step = max(tilted_tile.height + 22, height // 5)
+    column_step = max(tilted_tile.width - 30, width // 2)
+    for row, top in enumerate(range(-tilted_tile.height, height + tilted_tile.height, row_step)):
+        offset = -(tilted_tile.width // 2) if row % 2 else 0
+        for left in range(-tilted_tile.width + offset, width + tilted_tile.width, column_step):
+            overlay.alpha_composite(tilted_tile, (left, top))
     return Image.alpha_composite(canvas, overlay)
 
 

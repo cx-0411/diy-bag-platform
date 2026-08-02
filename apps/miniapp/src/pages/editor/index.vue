@@ -5,7 +5,7 @@ import { patternPixelSize, placementPixelPoint, pixelPointToPlacement } from '..
 import { advanceRotation, pointerAngleDegrees, type RotationSession } from '../../features/editor/domain/rotation'
 import { nextViewportZoom } from '../../features/editor/domain/viewport'
 import type { PatternPlacement, PixelSize } from '../../features/editor/domain/types'
-import { playSaveCelebration } from '../../features/editor/services/save-celebration'
+import { cancelSaveCelebration, prepareSaveCelebration } from '../../features/editor/services/save-celebration'
 import { useEditorStore } from '../../features/editor/stores/editor'
 
 interface ZoneRect extends PixelSize { left: number; top: number }
@@ -119,13 +119,11 @@ function stopGesture(): void {
 async function save(): Promise<void> {
   saving.value = true
   try {
+    prepareSaveCelebration()
     await editor.saveDesign()
-    playSaveCelebration()
-    // Let the burst start before moving to the confirmation page.
-    await new Promise<void>((resolve) => setTimeout(resolve, 360))
     uni.navigateTo({ url: '/pages/confirmation/index' })
   }
-  catch (error) { uni.showToast({ title: error instanceof Error ? error.message : '保存失败', icon: 'none' }) }
+  catch (error) { cancelSaveCelebration(); uni.showToast({ title: error instanceof Error ? error.message : '保存失败', icon: 'none' }) }
   finally { saving.value = false }
 }
 
