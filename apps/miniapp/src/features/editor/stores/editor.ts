@@ -100,7 +100,7 @@ export const useEditorStore = defineStore('editor', () => {
   async function loadSavedDesigns(): Promise<void> { savedDesigns.value = (await catalogApi.designs(clientKey())).map(fromApiDesign) }
   async function saveDesign(): Promise<void> {
     if (savedDesigns.value.length >= maxDrafts.value) throw new Error(`最多保存 ${maxDrafts.value} 个设计，请先删除一个`)
-    const items = placements.value.map((item) => { const pattern = getPattern(item.patternId); if (!pattern.patternVersionId) throw new Error('当前图案不是正式版本，无法保存'); return { pattern_version_id: pattern.patternVersionId, center_x_ratio: item.centerXRatio, center_y_ratio: item.centerYRatio, rotation_degrees: item.rotationDegrees, z_index: item.zIndex } })
+    const items = placements.value.map((item) => { const pattern = getPattern(item.patternId); if (!pattern.patternVersionId) throw new Error('当前图案不是正式版本，无法保存'); return { pattern_version_id: pattern.patternVersionId, center_x_ratio: item.centerXRatio, center_y_ratio: item.centerYRatio, rotation_degrees: ((Math.round(item.rotationDegrees) % 360) + 360) % 360, z_index: item.zIndex } })
     const design = await catalogApi.saveDesign({ bag_id: bag.value.id, client_key: clientKey(), items })
     savedDesign.value = { id: design.id, totalPriceCents: design.total_price_cents }
     savedDesigns.value.push({ ...savedDesign.value, bagId: bag.value.id, placements: JSON.parse(JSON.stringify(placements.value)) })

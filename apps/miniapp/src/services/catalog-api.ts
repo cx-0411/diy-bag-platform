@@ -8,8 +8,16 @@ export interface ApiDesign { id: string; bag_id: string; total_price_cents: numb
 export interface ApiAsset { id: string; original_name: string; content_type: string; size_bytes: number; url: string }
 
 type RequestMethod = 'GET' | 'POST' | 'DELETE'
+function errorMessage(detail: unknown, statusCode: number): string {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    const messages = detail.map((item) => item && typeof item === 'object' && 'msg' in item && typeof item.msg === 'string' ? item.msg : '').filter(Boolean)
+    if (messages.length) return `请求参数有误：${messages.join('；')}`
+  }
+  return `请求失败（${statusCode}）`
+}
 function request<T>(path: string, method: RequestMethod = 'GET', data?: object): Promise<T> {
-  return new Promise((resolve, reject) => uni.request({ url: `${API_BASE_URL}${path}`, method, data, header: { 'content-type': 'application/json' }, success: (response) => { if (response.statusCode >= 200 && response.statusCode < 300) resolve(response.data as T); else { const body = response.data as { detail?: string }; reject(new Error(body.detail ?? `请求失败（${response.statusCode}）`)) } }, fail: () => reject(new Error('网络请求失败，请确认后端服务已启动')) }))
+  return new Promise((resolve, reject) => uni.request({ url: `${API_BASE_URL}${path}`, method, data, header: { 'content-type': 'application/json' }, success: (response) => { if (response.statusCode >= 200 && response.statusCode < 300) resolve(response.data as T); else { const body = response.data as { detail?: unknown }; reject(new Error(errorMessage(body.detail, response.statusCode))) } }, fail: () => reject(new Error('网络请求失败，请确认后端服务已启动')) }))
 }
 export const catalogApi = {
   bags: () => request<ApiBag[]>('/catalog/bags'),
