@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import AppSetting, Bag, CartItem, Design, EmbroideryArea, FileAsset, Order, Pattern, PatternCategory, PatternVersion, DesignItem
+from app.models import AppSetting, Bag, CartItem, Design, DesignAsset, EmbroideryArea, FileAsset, Order, Pattern, PatternCategory, PatternVersion, DesignItem
 from app.schemas import AdminOrderOut, AreaIn, AreaOut, AssetOut, BagIn, BagOut, CartItemIn, CartItemOut, CatalogBagOut, CatalogPatternOut, CategoryIn, CategoryOut, CategoryUpdateIn, DesignIn, DesignItemOut, DesignLimitIn, DesignLimitOut, DesignOut, OrderCreateIn, OrderOut, OrderStatusIn, PatternIn, PatternOut, PatternVersionOut
 from app.services.designs import create_design
 from app.services.orders import create_order, mock_pay, update_production_status
@@ -136,7 +136,11 @@ def save_design(data: DesignIn, db: Session = Depends(get_db)):
 def list_designs(client_key: str, db: Session = Depends(get_db)):
     # The mobile editor shows customer-facing names as 设计 1、设计 2…,
     # so return saved designs in their original creation order.
-    designs = db.scalars(select(Design).where(Design.client_key == client_key).order_by(Design.created_at.asc())).all()
+    designs = db.scalars(select(Design).where(
+        Design.client_key == client_key,
+        ~select(CartItem.id).where(CartItem.design_id == Design.id).exists(),
+        ~select(Order.id).where(Order.design_id == Design.id).exists(),
+    ).order_by(Design.created_at.asc())).all()
     return [DesignOut(id=design.id, bag_id=design.bag_id, total_price_cents=design.total_price_cents, items=[DesignItemOut.model_validate(item) for item in db.scalars(select(DesignItem).where(DesignItem.design_id == design.id).order_by(DesignItem.z_index, DesignItem.created_at))]) for design in designs]
 @router.delete('/designs/{design_id}', status_code=204)
 def delete_design(design_id: UUID, client_key: str, db: Session = Depends(get_db)):
@@ -145,6 +149,7 @@ def delete_design(design_id: UUID, client_key: str, db: Session = Depends(get_db
     if db.scalar(select(CartItem.id).where(CartItem.design_id == design.id)) or db.scalar(select(Order.id).where(Order.design_id == design.id)):
         raise HTTPException(409, 'Design is referenced by a cart item or order and cannot be deleted')
     db.query(DesignItem).filter(DesignItem.design_id == design.id).delete()
+    db.query(DesignAsset).filter(DesignAsset.design_id == design.id).delete()
     db.delete(design); db.commit()
 @router.post('/cart-items', response_model=CartItemOut)
 def add_cart_item(data: CartItemIn, db: Session = Depends(get_db)):

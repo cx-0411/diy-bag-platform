@@ -82,6 +82,12 @@ def test_delete_design_for_own_client(client: TestClient) -> None:
     deleted = client.delete(f"/api/designs/{created['id']}?client_key=test-client-key")
     assert deleted.status_code == 204
 
+def test_delete_design_after_preview_is_generated(client: TestClient) -> None:
+    asset, version = setup_catalog(client, image_asset_id(client)); bag = setup_bag(client, asset)
+    created = client.post('/api/designs', json={'bag_id': bag, 'client_key': 'preview-delete-client', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5}]}).json()
+    assert client.post(f"/api/designs/{created['id']}/preview?client_key=preview-delete-client").status_code == 200
+    assert client.delete(f"/api/designs/{created['id']}?client_key=preview-delete-client").status_code == 204
+
 def test_lists_saved_designs_for_its_client_only(client: TestClient) -> None:
     asset, version = setup_catalog(client); bag = setup_bag(client, asset)
     client.post('/api/designs', json={'bag_id': bag, 'client_key': 'client-allowed', 'items': [{'pattern_version_id': version, 'center_x_ratio': .5, 'center_y_ratio': .5, 'z_index': 3}]})

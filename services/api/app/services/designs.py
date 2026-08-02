@@ -3,7 +3,7 @@ from math import cos, radians, sin
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from app.models import AppSetting, Bag, Design, DesignItem, EmbroideryArea, PatternVersion
+from app.models import AppSetting, Bag, CartItem, Design, DesignItem, EmbroideryArea, Order, PatternVersion
 from app.schemas import DesignIn
 def ensure_item_within_area(*, center_x_ratio, center_y_ratio, width_mm: int, height_mm: int, area_width_mm: int, area_height_mm: int, rotation_degrees: int) -> None:
     x = Decimal(str(center_x_ratio)); y = Decimal(str(center_y_ratio)); angle = radians(rotation_degrees)
@@ -17,7 +17,11 @@ def ensure_item_within_area(*, center_x_ratio, center_y_ratio, width_mm: int, he
 
 def create_design(session: Session, payload: DesignIn) -> Design:
     limit = session.scalar(select(AppSetting.value_int).where(AppSetting.key == 'max_design_drafts')) or 3
-    saved_count = session.scalar(select(func.count(Design.id)).where(Design.client_key == payload.client_key)) or 0
+    saved_count = session.scalar(select(func.count(Design.id)).where(
+        Design.client_key == payload.client_key,
+        ~select(CartItem.id).where(CartItem.design_id == Design.id).exists(),
+        ~select(Order.id).where(Order.design_id == Design.id).exists(),
+    )) or 0
     if saved_count >= limit: raise HTTPException(409, f'Design draft limit reached ({limit})')
     bag = session.scalar(select(Bag).where(Bag.id == payload.bag_id, Bag.deleted_at.is_(None), Bag.status == 'published'))
     if not bag: raise HTTPException(404, 'Bag is not available')

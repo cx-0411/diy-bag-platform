@@ -5,7 +5,7 @@ from math import floor
 from uuid import UUID
 
 from fastapi import HTTPException
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -35,6 +35,32 @@ def _encode(image: Image.Image) -> bytes:
     result = BytesIO()
     image.save(result, 'PNG', optimize=True)
     return result.getvalue()
+
+
+def _preview_watermark(canvas: Image.Image) -> Image.Image:
+    """Make preview-only artwork unmistakable without changing production files."""
+    width, height = canvas.size
+    overlay = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    try:
+        title_font = ImageFont.truetype('DejaVuSans-Bold.ttf', max(26, min(width, height) // 8))
+        subtitle_font = ImageFont.truetype('DejaVuSans-Bold.ttf', max(14, min(width, height) // 20))
+    except OSError:
+        title_font = subtitle_font = ImageFont.load_default()
+
+    title = 'DIY PREVIEW'
+    subtitle = 'WATERMARK · NOT FOR PRODUCTION'
+    title_box = draw.textbbox((0, 0), title, font=title_font)
+    subtitle_box = draw.textbbox((0, 0), subtitle, font=subtitle_font)
+    padding = max(16, min(width, height) // 18)
+    band_height = (title_box[3] - title_box[1]) + (subtitle_box[3] - subtitle_box[1]) + padding * 2
+    band_top = max(0, (height - band_height) // 2)
+    draw.rectangle((0, band_top, width, band_top + band_height), fill=(96, 54, 39, 170))
+    title_x = (width - (title_box[2] - title_box[0])) // 2
+    subtitle_x = (width - (subtitle_box[2] - subtitle_box[0])) // 2
+    draw.text((title_x, band_top + padding - title_box[1]), title, font=title_font, fill=(255, 255, 255, 245), stroke_width=1, stroke_fill=(81, 42, 30, 245))
+    draw.text((subtitle_x, band_top + padding + (title_box[3] - title_box[1]) - subtitle_box[1]), subtitle, font=subtitle_font, fill=(255, 238, 226, 245))
+    return Image.alpha_composite(canvas, overlay)
 
 
 def render_design_preview(session: Session, design: Design) -> FileAsset:
@@ -70,10 +96,7 @@ def render_design_preview(session: Session, design: Design) -> FileAsset:
         center_x = area_x + float(item.center_x_ratio) * area_w
         center_y = area_y + float(item.center_y_ratio) * area_h
         canvas.alpha_composite(sticker, (floor(center_x - sticker.width / 2), floor(center_y - sticker.height / 2)))
-    overlay = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
-    draw.text((16, max(16, height - 30)), 'DIY PREVIEW - WATERMARK', fill=(255, 255, 255, 140), stroke_width=1, stroke_fill=(60, 45, 35, 140))
-    canvas = Image.alpha_composite(canvas, overlay)
+    canvas = _preview_watermark(canvas)
     key, size = storage.save_bytes(_encode(canvas))
     asset = FileAsset(original_name=f'design-preview-{design.id}.png', storage_key=key, content_type='image/png', size_bytes=size, visibility='public')
     session.add(asset); session.flush()
